@@ -37,3 +37,9 @@ pnpm build
 
 On Windows, double-click `Start BidCraft.bat` after building. The local server
 opens `http://127.0.0.1:8787`, which can be installed from Chrome or Edge.
+
+## GitHub Pages
+
+Use the included GitHub Actions workflow instead of deploying the repo root.
+GitHub Pages should publish the built `dist` folder. See
+`GITHUB-PAGES.md` for setup steps.
