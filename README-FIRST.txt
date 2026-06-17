@@ -1,8 +1,10 @@
-BIDCRAFT v0.5 - QUICK START
+BIDCRAFT v0.6 - QUICK START
 ===========================
 
 WHAT'S NEW
 
+- Edit project name, client, proposal number, and status from the Estimate tab.
+- Added Supabase/Vercel planning files for future logins, companies, and audit logs.
 - Add and manage trades from Settings.
 - Custom trades appear in Estimate and Price Book trade dropdowns.
 - Materials is now a project-specific purchasing list, separate from estimate lines.

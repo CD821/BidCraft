@@ -15,12 +15,27 @@ affecting the Price Book or any other estimate.
 - Searchable, aligned project list
 - Project purchasing lists with material costs, tax, delivery, notes, and sorting
 - Editable trade list shared by estimates and the price book
+- Editable project details on the Estimate and Proposal screens
+- Optional Supabase login mode
+- Create/select companies
+- Company-scoped projects, price books, trades, and proposal settings
+- Join-company requests with owner/admin approval
+- Supabase audit logs for project, price-book, and company-setting changes
 - Waste factors and aggregated purchasing lists
 - Overhead, profit markup, and configurable tax basis
 - Print-ready US Letter proposals
 - Browser Print / Save as PDF
 - JSON backup and restore
 - Local autosave and PWA installation
+
+## Supabase / Vercel
+
+BidCraft still works as a local/offline app when Supabase variables are missing.
+When `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in Vercel, the app
+shows login, company workspace, cloud save/load, join requests, and change logs.
+
+Run `supabase/schema.sql` in Supabase SQL Editor before deploying the connected
+version. See `SUPABASE-VERCEL-SETUP.md` for the setup checklist.
 
 ## Development
 

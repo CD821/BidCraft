@@ -1,21 +1,35 @@
 import { Icon } from "./Icon";
 
-const navItems = [
-  ["projects", "Projects"],
-  ["book", "Price Book"],
-  ["company", "Company"],
-  ["settings", "Settings"],
+const baseNavItems = [
+  ["projects", "projects", "Projects"],
+  ["pricebook", "book", "Price Book"],
+  ["company", "company", "Company"],
+  ["settings", "settings", "Settings"],
 ];
 
 export function Sidebar({
   activeView,
+  cloudEnabled = false,
   company,
   installAvailable,
   mobileOpen,
   onCloseMobile,
   onInstall,
   onNavigate,
+  workspaceLabel = "Local workspace",
+  workspaceMode = "Local workspace",
 }) {
+  const navItems = cloudEnabled
+    ? [
+        ["projects", "projects", "Projects"],
+        ["pricebook", "book", "Price Book"],
+        ["company", "company", "Company"],
+        ["cloud", "cloud", "Workspace"],
+        ["settings", "settings", "Settings"],
+      ]
+    : baseNavItems;
+  const companyName = company?.name || workspaceLabel || "Your Company";
+
   return (
     <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
       <div className="brand">
@@ -25,8 +39,7 @@ export function Sidebar({
       </div>
 
       <nav className="sidebar-nav" aria-label="Main navigation">
-        {navItems.map(([icon, label]) => {
-          const view = label.toLowerCase().replace(" ", "");
+        {navItems.map(([view, icon, label]) => {
           return (
             <button
               className={activeView === view ? "nav-active" : ""}
@@ -53,15 +66,15 @@ export function Sidebar({
         ) : null}
         <div className="company-chip">
           <div className="avatar">
-            {(company.name || "BC")
+            {companyName
               .split(" ")
               .map((word) => word[0])
               .join("")
               .slice(0, 2)}
           </div>
           <div>
-            <strong>{company.name || "Your Company"}</strong>
-            <span>Local workspace</span>
+            <strong>{companyName}</strong>
+            <span>{workspaceMode}</span>
           </div>
         </div>
       </div>

@@ -2,8 +2,12 @@ import { useMemo, useRef, useState } from "react";
 import { Icon } from "./Icon";
 
 export function SettingsView({
+  auditLogs = [],
+  cloudCompany,
+  cloudEnabled = false,
   data,
   onImport,
+  onRefreshCloud,
   onReset,
   onTradesChange,
   toast,
@@ -46,7 +50,7 @@ export function SettingsView({
       if (!Array.isArray(parsed.projects) || !Array.isArray(parsed.priceBook)) {
         throw new Error("Invalid backup");
       }
-      onImport(parsed);
+      await onImport(parsed);
       toast("Backup imported.");
     } catch {
       toast("That file is not a valid BidCraft backup.", "error");
@@ -91,7 +95,9 @@ export function SettingsView({
         <div>
           <h2>Settings & Data</h2>
           <p>
-            BidCraft stores data on this device. Download backups regularly.
+            {cloudEnabled
+              ? `BidCraft is connected to ${cloudCompany?.name || "your company"} in Supabase. Backups are still useful before major changes.`
+              : "BidCraft stores data on this device. Download backups regularly."}
           </p>
         </div>
       </div>
@@ -164,7 +170,10 @@ export function SettingsView({
       <section className="settings-panel settings-actions">
         <div>
           <h3>Restore a backup</h3>
-          <p>Import a BidCraft JSON file from this or another device.</p>
+          <p>
+            Import a BidCraft JSON file from this or another device.
+            {cloudEnabled ? " In cloud mode this also uploads it to the active company." : ""}
+          </p>
         </div>
         <button
           className="button secondary"
@@ -186,19 +195,61 @@ export function SettingsView({
       <section className="settings-panel settings-actions danger-zone">
         <div>
           <h3>Reset demo data</h3>
-          <p>Replace local data with the original example project.</p>
+          <p>
+            {cloudEnabled
+              ? "Replace the current screen with demo data. Cloud data is not deleted."
+              : "Replace local data with the original example project."}
+          </p>
         </div>
         <button className="button danger-button" onClick={onReset} type="button">
           Reset app
         </button>
       </section>
 
+      {cloudEnabled ? (
+        <section className="settings-panel">
+          <div className="settings-panel-heading">
+            <div>
+              <h3>Change log</h3>
+              <p>
+                Latest company changes recorded by Supabase. This is useful for
+                checking who changed estimates, price-book items, or company
+                settings.
+              </p>
+            </div>
+            <button
+              className="button secondary small"
+              onClick={onRefreshCloud}
+              type="button"
+            >
+              <Icon name="cloud" size={17} />
+              Refresh
+            </button>
+          </div>
+          <div className="audit-list">
+            {auditLogs.length ? (
+              auditLogs.map((log) => (
+                <div className="audit-row" key={log.id}>
+                  <div>
+                    <strong>{log.action}</strong>
+                    <span>{log.entity_type}</span>
+                  </div>
+                  <span>{new Date(log.created_at).toLocaleString()}</span>
+                </div>
+              ))
+            ) : (
+              <p>No logged changes yet.</p>
+            )}
+          </div>
+        </section>
+      ) : null}
+
       <section className="settings-panel">
-        <h3>About local storage</h3>
+        <h3>{cloudEnabled ? "About cloud storage" : "About local storage"}</h3>
         <p>
-          No account or internet connection is required after installation.
-          Clearing browser site data will remove local projects unless a backup
-          has been downloaded.
+          {cloudEnabled
+            ? "Your active company data is stored in Supabase. This browser still keeps a local copy so the screen feels fast, but Supabase is the source of truth after sign in."
+            : "No account or internet connection is required after installation. Clearing browser site data will remove local projects unless a backup has been downloaded."}
         </p>
       </section>
     </main>

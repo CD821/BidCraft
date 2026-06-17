@@ -196,6 +196,52 @@ export function EstimateView({
     <>
       <div className="estimate-layout">
         <section className="estimate-main">
+          <div className="project-details-card">
+            <label>
+              <span>Project name</span>
+              <input
+                onChange={(event) =>
+                  patchProject({ name: event.target.value })
+                }
+                value={project.name}
+              />
+            </label>
+            <label>
+              <span>Client</span>
+              <input
+                onChange={(event) =>
+                  patchProject({ client: event.target.value })
+                }
+                placeholder="Client name"
+                value={project.client}
+              />
+            </label>
+            <label>
+              <span>Proposal #</span>
+              <input
+                onChange={(event) =>
+                  patchProject({ proposalNumber: event.target.value })
+                }
+                value={project.proposalNumber}
+              />
+            </label>
+            <label>
+              <span>Status</span>
+              <select
+                onChange={(event) =>
+                  patchProject({ status: event.target.value })
+                }
+                value={project.status}
+              >
+                {["Draft", "Submitted", "Accepted", "Rejected"].map(
+                  (status) => (
+                    <option key={status}>{status}</option>
+                  ),
+                )}
+              </select>
+            </label>
+          </div>
+
           <div className="estimate-toolbar">
             <div className="toolbar-group">
               <button

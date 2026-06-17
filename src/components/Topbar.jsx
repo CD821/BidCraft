@@ -6,6 +6,7 @@ export function Topbar({
   onNew,
   onPrint,
   onSave,
+  saveStatus = "Saved locally",
   title,
 }) {
   return (
@@ -19,7 +20,7 @@ export function Topbar({
           {project ? (
             <span className="autosave">
               <Icon name="check" size={15} />
-              Saved locally
+              {saveStatus}
             </span>
           ) : null}
         </div>

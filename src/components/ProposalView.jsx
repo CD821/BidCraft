@@ -33,6 +33,15 @@ export function ProposalView({
       <aside className="proposal-settings">
         <h2>Proposal Settings</h2>
         <div className="form-grid two-column compact">
+          <label className="span-two">
+            Project name
+            <input
+              onChange={(event) =>
+                patchProject({ name: event.target.value })
+              }
+              value={project.name}
+            />
+          </label>
           <label>
             Client
             <input

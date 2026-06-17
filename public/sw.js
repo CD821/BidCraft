@@ -1,4 +1,4 @@
-const CACHE_NAME = "bidcraft-v5";
+const CACHE_NAME = "bidcraft-v7";
 const APP_SHELL = ["./", "./index.html", "./manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
