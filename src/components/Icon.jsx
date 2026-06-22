@@ -10,6 +10,7 @@ const paths = {
   estimate: "M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01",
   materials: "M21 16V8l-9-5-9 5v8l9 5z M3.3 7.7 12 13l8.7-5.3 M12 22v-9",
   proposal: "M6 2h9l5 5v15H6z M14 2v6h6 M9 13h8 M9 17h8",
+  attachments: "M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.9-9.9a4 4 0 0 1 5.7 5.7l-9.9 9.9a2 2 0 0 1-2.8-2.8l9.2-9.2",
   trash: "M4 7h16 M9 7V4h6v3 M7 7l1 14h8l1-14",
   copy: "M8 8h12v12H8z M4 16H3V4h12v1",
   search: "m21 21-4.35-4.35 M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0z",

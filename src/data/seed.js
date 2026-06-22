@@ -207,6 +207,7 @@ export const initialData = {
       notes: "Confirm final device count before submitting.",
       lines: demoLines,
       materialList: [],
+      attachments: [],
     },
   ],
 };
@@ -237,5 +238,6 @@ export function newProject(index = 1) {
     notes: "",
     lines: [],
     materialList: [],
+    attachments: [],
   };
 }

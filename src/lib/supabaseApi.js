@@ -1,10 +1,9 @@
 const SESSION_KEY = "bidcraft:supabase-session";
 
-const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || "").replace(
-  /\/$/,
-  "",
-);
-const supabaseAnonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY || "");
+const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || "")
+  .trim()
+  .replace(/\/+$/, "");
+const supabaseAnonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY || "").trim();
 
 export function isSupabaseConfigured() {
   return Boolean(supabaseUrl && supabaseAnonKey);
@@ -60,37 +59,42 @@ async function parseResponse(response) {
   return data;
 }
 
+async function fetchSupabase(path, options = {}) {
+  const url = `${supabaseUrl}${path}`;
+  try {
+    return await fetch(url, options);
+  } catch {
+    throw new Error(
+      `Could not reach Supabase at ${supabaseUrl}. Check VITE_SUPABASE_URL, redeploy Vercel, and confirm the Supabase project is active.`,
+    );
+  }
+}
+
 export async function refreshSessionIfNeeded() {
   const session = getStoredSession();
   if (!session?.refresh_token) return session;
   const expiresAt = Number(session.expires_at || 0);
   if (expiresAt > Math.floor(Date.now() / 1000) + 90) return session;
 
-  const response = await fetch(
-    `${supabaseUrl}/auth/v1/token?grant_type=refresh_token`,
-    {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({ refresh_token: session.refresh_token }),
-    },
-  );
+  const response = await fetchSupabase("/auth/v1/token?grant_type=refresh_token", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ refresh_token: session.refresh_token }),
+  });
   return storeSession(await parseResponse(response));
 }
 
 export async function signInWithPassword(email, password) {
-  const response = await fetch(
-    `${supabaseUrl}/auth/v1/token?grant_type=password`,
-    {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({ email, password }),
-    },
-  );
+  const response = await fetchSupabase("/auth/v1/token?grant_type=password", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ email, password }),
+  });
   return storeSession(await parseResponse(response));
 }
 
 export async function signUpWithPassword(email, password, fullName) {
-  const response = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+  const response = await fetchSupabase("/auth/v1/signup", {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({
@@ -106,7 +110,7 @@ export async function signUpWithPassword(email, password, fullName) {
 export async function signOut() {
   const session = getStoredSession();
   if (session?.access_token) {
-    await fetch(`${supabaseUrl}/auth/v1/logout`, {
+    await fetchSupabase("/auth/v1/logout", {
       method: "POST",
       headers: authHeaders(session),
     }).catch(() => {});
@@ -120,7 +124,7 @@ export async function supabaseRequest(path, options = {}) {
     ...authHeaders(session),
     ...(options.headers || {}),
   };
-  const response = await fetch(`${supabaseUrl}${path}`, {
+  const response = await fetchSupabase(path, {
     ...options,
     headers,
   });

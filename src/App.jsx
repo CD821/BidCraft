@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AttachmentsView } from "./components/AttachmentsView";
 import { AuthView } from "./components/AuthView";
 import { CloudBar } from "./components/CloudBar";
 import { CompanyView } from "./components/CompanyView";
@@ -38,7 +39,48 @@ import {
 } from "./lib/supabaseApi";
 
 const ACTIVE_COMPANY_KEY = "bidcraft:active-company";
+const estimateTabs = new Set(["estimate", "materials", "attachments", "proposal"]);
 const clone = (value) => JSON.parse(JSON.stringify(value));
+
+function parseRoute(pathname = window.location.pathname) {
+  const segments = pathname.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+  if (!segments.length) return { view: "projects", projectTab: "estimate" };
+
+  const [section, projectId, tab] = segments;
+  if (section === "estimate") {
+    return {
+      view: "estimate",
+      projectId: projectId || null,
+      projectTab: estimateTabs.has(tab) ? tab : "estimate",
+    };
+  }
+
+  if (section === "workspace") return { view: "cloud", projectTab: "estimate" };
+  if (section === "pricebook") return { view: "pricebook", projectTab: "estimate" };
+  if (section === "company") return { view: "company", projectTab: "estimate" };
+  if (section === "settings") return { view: "settings", projectTab: "estimate" };
+  if (section === "projects") return { view: "projects", projectTab: "estimate" };
+
+  return { view: "projects", projectTab: "estimate" };
+}
+
+function routePath(view, projectId, projectTab = "estimate") {
+  if (view === "estimate") {
+    const idSegment = projectId ? `/${projectId}` : "";
+    const tabSegment = projectTab && projectTab !== "estimate" ? `/${projectTab}` : "";
+    return `/estimate${idSegment}${tabSegment}`;
+  }
+  if (view === "cloud") return "/workspace";
+  if (view === "pricebook") return "/pricebook";
+  if (view === "company") return "/company";
+  if (view === "settings") return "/settings";
+  return "/projects";
+}
+
+function writeRoute(path, replace = false) {
+  if (window.location.pathname === path) return;
+  window.history[replace ? "replaceState" : "pushState"]({}, "", path);
+}
 
 function uniqueTrades(data) {
   const seen = new Set();
@@ -67,15 +109,16 @@ function userIdFromSession(session) {
 
 export default function App() {
   const cloudEnabled = isSupabaseConfigured();
+  const initialRoute = parseRoute();
   const [data, setData] = usePersistentState(
     "bidcraft:data:v1",
     clone(initialData),
   );
   const [activeProjectId, setActiveProjectId] = useState(
-    () => data.projects[0]?.id || null,
+    () => initialRoute.projectId || data.projects[0]?.id || null,
   );
-  const [view, setView] = useState("estimate");
-  const [projectTab, setProjectTab] = useState("estimate");
+  const [view, setView] = useState(initialRoute.view);
+  const [projectTab, setProjectTab] = useState(initialRoute.projectTab);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [toastState, setToastState] = useState(null);
@@ -118,6 +161,20 @@ export default function App() {
     const timeout = window.setTimeout(() => setToastState(null), 2800);
     return () => window.clearTimeout(timeout);
   }, [toastState]);
+
+  useEffect(() => {
+    function handlePopState() {
+      const route = parseRoute();
+      setView(route.view);
+      setProjectTab(route.projectTab || "estimate");
+      if (route.projectId) {
+        setActiveProjectId(route.projectId);
+      }
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   useEffect(() => {
     if (!cloudEnabled) return undefined;
@@ -164,8 +221,14 @@ export default function App() {
     try {
       const { appData, company, auditLogs: logs } =
         await loadCompanyData(companyId);
+      const currentRoute = parseRoute();
+      const routeProjectId =
+        currentRoute.projectId &&
+        appData.projects.some((entry) => entry.id === currentRoute.projectId)
+          ? currentRoute.projectId
+          : null;
       setData(appData);
-      setActiveProjectId(appData.projects[0]?.id || null);
+      setActiveProjectId(routeProjectId || appData.projects[0]?.id || null);
       setActiveCompanyId(companyId);
       setActiveCloudCompany(company);
       setAuditLogs(logs || []);
@@ -175,8 +238,13 @@ export default function App() {
       setCloudMessage("");
       setView((current) => {
         if (!appData.projects.length) return "projects";
-        return current === "cloud" ? "projects" : current;
+        if (current === "cloud") {
+          writeRoute("/projects");
+          return "projects";
+        }
+        return currentRoute.view;
       });
+      setProjectTab(currentRoute.projectTab || "estimate");
     } catch (error) {
       setCloudMessage(error.message || "Could not load company data.");
       toast(error.message || "Could not load company data.", "error");
@@ -215,6 +283,7 @@ export default function App() {
         setJoinRequests([]);
         setCloudMessage("Create a company or request to join one.");
         setView("cloud");
+        writeRoute("/workspace", true);
       }
       return safeRows;
     } catch (error) {
@@ -233,7 +302,10 @@ export default function App() {
       const session = await signInWithPassword(email, password);
       setCloudSession(session);
       const rows = await loadCloudCompanies(session);
-      if (!rows.length) setView("cloud");
+      if (!rows.length) {
+        setView("cloud");
+        writeRoute("/workspace", true);
+      }
       toast("Signed in.");
     } catch (error) {
       setCloudMessage(error.message || "Sign in failed.");
@@ -251,6 +323,7 @@ export default function App() {
         setCloudSession(session);
         await loadCloudCompanies(session);
         setView("cloud");
+        writeRoute("/workspace", true);
         toast("Account created.");
       } else {
         setCloudMessage(
@@ -285,6 +358,7 @@ export default function App() {
       const companyId = await createCloudCompany(companyName, cloudUserId);
       await loadCloudCompanies(cloudSession, companyId);
       setView("projects");
+      writeRoute("/projects");
       toast("Company created.");
     } catch (error) {
       setCloudMessage(error.message || "Could not create company.");
@@ -417,6 +491,7 @@ export default function App() {
     setActiveProjectId(next.id);
     setProjectTab("estimate");
     setView("estimate");
+    writeRoute(routePath("estimate", next.id));
     if (cloudActive) {
       saveProjectToCloud(next, activeCompanyId, cloudUserId).catch(
         handleCloudSaveError,
@@ -433,7 +508,16 @@ export default function App() {
     }
     const remaining = data.projects.filter((entry) => entry.id !== id);
     setData((current) => ({ ...current, projects: remaining }));
-    if (activeProjectId === id) setActiveProjectId(remaining[0]?.id || null);
+    if (activeProjectId === id) {
+      const nextProjectId = remaining[0]?.id || null;
+      setActiveProjectId(nextProjectId);
+      if (nextProjectId) {
+        writeRoute(routePath("estimate", nextProjectId), true);
+      } else {
+        setView("projects");
+        writeRoute("/projects", true);
+      }
+    }
     if (cloudActive) {
       deleteProjectFromCloud(id).catch(handleCloudSaveError);
     }
@@ -444,6 +528,7 @@ export default function App() {
     setActiveProjectId(id);
     setProjectTab("estimate");
     setView("estimate");
+    writeRoute(routePath("estimate", id));
   }
 
   async function saveProject() {
@@ -462,10 +547,16 @@ export default function App() {
   function printProposal() {
     if (projectTab !== "proposal") {
       setProjectTab("proposal");
+      writeRoute(routePath("estimate", project?.id || activeProjectId, "proposal"));
       window.setTimeout(() => window.print(), 150);
     } else {
       window.print();
     }
+  }
+
+  function changeProjectTab(tab) {
+    setProjectTab(tab);
+    writeRoute(routePath("estimate", project?.id || activeProjectId, tab));
   }
 
   async function installApp() {
@@ -480,12 +571,14 @@ export default function App() {
 
   function navigate(nextView) {
     setView(nextView);
+    writeRoute(routePath(nextView, activeProjectId, projectTab));
   }
 
   async function importBackup(imported) {
     setData(imported);
     setActiveProjectId(imported.projects[0]?.id || null);
     setView("projects");
+    writeRoute("/projects");
     if (cloudActive) {
       await importDataToCloud(imported, activeCompanyId, cloudUserId);
       await activateCloudCompany(activeCompanyId);
@@ -501,6 +594,8 @@ export default function App() {
     setData(reset);
     setActiveProjectId(reset.projects[0]?.id || null);
     setView("estimate");
+    setProjectTab("estimate");
+    writeRoute(routePath("estimate", reset.projects[0]?.id || null), true);
     toast(cloudActive ? "Demo data loaded locally." : "Demo data restored.");
   }
 
@@ -566,7 +661,7 @@ export default function App() {
             companies={companies}
             email={cloudSession.user?.email}
             loading={cloudLoading}
-            onManage={() => setView("cloud")}
+            onManage={() => navigate("cloud")}
             onSelectCompany={activateCloudCompany}
             onSignOut={handleSignOut}
           />
@@ -605,12 +700,13 @@ export default function App() {
               {[
                 ["estimate", "Estimate"],
                 ["materials", "Materials"],
+                ["attachments", "Attachments"],
                 ["proposal", "Proposal"],
               ].map(([tab, label]) => (
                 <button
                   className={projectTab === tab ? "tab-active" : ""}
                   key={tab}
-                  onClick={() => setProjectTab(tab)}
+                  onClick={() => changeProjectTab(tab)}
                   type="button"
                 >
                   <Icon name={tab} size={19} />
@@ -621,7 +717,7 @@ export default function App() {
             <div className="tab-content">
               {projectTab === "estimate" ? (
                 <EstimateView
-                  onOpenProposal={() => setProjectTab("proposal")}
+                  onOpenProposal={() => changeProjectTab("proposal")}
                   priceBook={data.priceBook}
                   project={project}
                   tradeOptions={tradeOptions}
@@ -630,6 +726,13 @@ export default function App() {
               ) : null}
               {projectTab === "materials" ? (
                 <MaterialsView
+                  project={project}
+                  toast={toast}
+                  updateProject={updateProject}
+                />
+              ) : null}
+              {projectTab === "attachments" ? (
+                <AttachmentsView
                   project={project}
                   toast={toast}
                   updateProject={updateProject}

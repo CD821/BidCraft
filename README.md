@@ -16,6 +16,8 @@ affecting the Price Book or any other estimate.
 - Project purchasing lists with material costs, tax, delivery, notes, and sorting
 - Editable trade list shared by estimates and the price book
 - Editable project details on the Estimate and Proposal screens
+- URL routes for projects, workspace, settings, and estimate tabs
+- Estimate file attachments for drawings, PDFs, photos, quotes, and notes
 - Optional Supabase login mode
 - Create/select companies
 - Company-scoped projects, price books, trades, and proposal settings

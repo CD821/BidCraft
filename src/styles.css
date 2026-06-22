@@ -1538,6 +1538,120 @@ textarea:focus,
   background: var(--orange-soft);
 }
 
+.attachment-summary {
+  display: grid;
+  grid-template-columns: 150px 160px minmax(260px, 1fr);
+  gap: 0;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.attachment-summary > div,
+.attachment-summary > p {
+  display: grid;
+  min-height: 70px;
+  align-content: center;
+  padding: 12px 16px;
+  border-right: 1px solid var(--border);
+}
+
+.attachment-summary > p {
+  border-right: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.attachment-summary span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.attachment-summary strong {
+  margin-top: 5px;
+  font-size: 16px;
+}
+
+.attachment-list {
+  display: grid;
+  gap: 10px;
+}
+
+.attachment-card {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.attachment-file-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--orange);
+  background: var(--orange-soft);
+}
+
+.attachment-main {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.attachment-main .table-input {
+  padding-left: 0;
+}
+
+.attachment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.attachment-meta span {
+  padding-right: 8px;
+  border-right: 1px solid var(--border);
+}
+
+.attachment-meta span:last-child {
+  border-right: 0;
+}
+
+.attachment-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.attachment-actions a {
+  text-decoration: none;
+}
+
+.attachment-empty {
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.attachment-empty:hover {
+  color: var(--orange);
+  background: var(--orange-soft);
+}
+
 .empty-state {
   display: grid;
   min-height: 250px;
@@ -2306,6 +2420,15 @@ button.company-card:hover,
     grid-column: span 2;
   }
 
+  .attachment-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .attachment-summary > p {
+    grid-column: span 2;
+    border-top: 1px solid var(--border);
+  }
+
   .project-grid {
     grid-template-columns: minmax(180px, 1.5fr) 1fr 110px;
   }
@@ -2433,6 +2556,28 @@ button.company-card:hover,
 
   .material-summary-grid > div:nth-child(even) {
     border-right: 0;
+  }
+
+  .attachment-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .attachment-summary > div,
+  .attachment-summary > p {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .attachment-summary > p {
+    grid-column: auto;
+  }
+
+  .attachment-card {
+    grid-template-columns: 1fr;
+  }
+
+  .attachment-actions {
+    justify-content: flex-end;
   }
 
   .project-search {
