@@ -20,6 +20,7 @@ affecting the Price Book or any other estimate.
 - Estimate file attachments for drawings, PDFs, photos, quotes, and notes
 - Optional Supabase login mode
 - Create/select companies
+- Edit company names and manage company member roles/access
 - Company-scoped projects, price books, trades, and proposal settings
 - Join-company requests with owner/admin approval
 - Supabase audit logs for project, price-book, and company-setting changes

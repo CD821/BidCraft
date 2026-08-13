@@ -188,9 +188,18 @@ set search_path = public
 as $$
 declare
   new_company_id uuid;
+  clean_name text;
 begin
+  clean_name = nullif(trim(company_name), '');
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+  if clean_name is null then
+    raise exception 'Company name is required';
+  end if;
+
   insert into public.companies (name, created_by)
-  values (trim(company_name), auth.uid())
+  values (clean_name, auth.uid())
   returning id into new_company_id;
 
   insert into public.company_members (company_id, user_id, role)
@@ -210,10 +219,44 @@ begin
     'create',
     'company',
     new_company_id,
-    jsonb_build_object('name', trim(company_name))
+    jsonb_build_object('name', clean_name)
   );
 
   return new_company_id;
+end;
+$$;
+
+create or replace function public.rename_company(
+  target_company_id uuid,
+  company_name text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  clean_name text;
+begin
+  clean_name = nullif(trim(company_name), '');
+  if clean_name is null then
+    raise exception 'Company name is required';
+  end if;
+
+  if not public.has_company_role(target_company_id, array['owner', 'admin']) then
+    raise exception 'Only company owners and admins can rename a company';
+  end if;
+
+  update public.companies
+  set
+    name = clean_name,
+    settings = jsonb_set(
+      coalesce(settings, '{}'::jsonb),
+      '{company,name}',
+      to_jsonb(clean_name),
+      true
+    )
+  where id = target_company_id;
 end;
 $$;
 
@@ -313,6 +356,169 @@ as $$
     and r.status = 'pending'
     and public.has_company_role(target_company_id, array['owner', 'admin'])
   order by r.created_at asc;
+$$;
+
+create or replace function public.list_company_members(target_company_id uuid)
+returns table (
+  user_id uuid,
+  email text,
+  full_name text,
+  role text,
+  created_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    cm.user_id,
+    p.email,
+    p.full_name,
+    cm.role,
+    cm.created_at
+  from public.company_members cm
+  left join public.profiles p on p.id = cm.user_id
+  where cm.company_id = target_company_id
+    and public.is_company_member(target_company_id)
+  order by
+    case cm.role
+      when 'owner' then 1
+      when 'admin' then 2
+      when 'estimator' then 3
+      else 4
+    end,
+    coalesce(p.full_name, p.email);
+$$;
+
+create or replace function public.update_company_member_role(
+  target_company_id uuid,
+  target_user_id uuid,
+  new_role text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  clean_role text;
+  target_current_role text;
+  owner_count integer;
+begin
+  clean_role = nullif(trim(new_role), '');
+  if clean_role not in ('owner', 'admin', 'estimator', 'viewer') then
+    raise exception 'Invalid member role';
+  end if;
+
+  if not public.has_company_role(target_company_id, array['owner', 'admin']) then
+    raise exception 'Only company owners and admins can change roles';
+  end if;
+
+  select role into target_current_role
+  from public.company_members
+  where company_id = target_company_id
+    and user_id = target_user_id;
+
+  if target_current_role is null then
+    raise exception 'Company member not found';
+  end if;
+
+  if target_current_role = 'owner' and clean_role <> 'owner' then
+    select count(*) into owner_count
+    from public.company_members
+    where company_id = target_company_id
+      and role = 'owner';
+
+    if owner_count <= 1 then
+      raise exception 'A company must keep at least one owner';
+    end if;
+  end if;
+
+  update public.company_members
+  set role = clean_role
+  where company_id = target_company_id
+    and user_id = target_user_id;
+
+  insert into public.audit_logs (
+    company_id,
+    actor_user_id,
+    action,
+    entity_type,
+    entity_id,
+    before_data,
+    after_data
+  )
+  values (
+    target_company_id,
+    auth.uid(),
+    'update_role',
+    'company_members',
+    target_user_id,
+    jsonb_build_object('role', target_current_role),
+    jsonb_build_object('role', clean_role)
+  );
+end;
+$$;
+
+create or replace function public.remove_company_member(
+  target_company_id uuid,
+  target_user_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_current_role text;
+  owner_count integer;
+begin
+  if not public.has_company_role(target_company_id, array['owner', 'admin']) then
+    raise exception 'Only company owners and admins can remove members';
+  end if;
+
+  select role into target_current_role
+  from public.company_members
+  where company_id = target_company_id
+    and user_id = target_user_id;
+
+  if target_current_role is null then
+    raise exception 'Company member not found';
+  end if;
+
+  if target_current_role = 'owner' then
+    select count(*) into owner_count
+    from public.company_members
+    where company_id = target_company_id
+      and role = 'owner';
+
+    if owner_count <= 1 then
+      raise exception 'A company must keep at least one owner';
+    end if;
+  end if;
+
+  delete from public.company_members
+  where company_id = target_company_id
+    and user_id = target_user_id;
+
+  insert into public.audit_logs (
+    company_id,
+    actor_user_id,
+    action,
+    entity_type,
+    entity_id,
+    before_data
+  )
+  values (
+    target_company_id,
+    auth.uid(),
+    'remove_member',
+    'company_members',
+    target_user_id,
+    jsonb_build_object('role', target_current_role)
+  );
+end;
 $$;
 
 create or replace function public.review_join_request(
@@ -595,8 +801,12 @@ on public.audit_logs for select
 using (public.is_company_member(company_id));
 
 grant execute on function public.create_company(text) to authenticated;
+grant execute on function public.rename_company(uuid, text) to authenticated;
 grant execute on function public.list_my_companies() to authenticated;
 grant execute on function public.search_companies(text) to authenticated;
 grant execute on function public.request_join_company(uuid) to authenticated;
 grant execute on function public.list_join_requests(uuid) to authenticated;
+grant execute on function public.list_company_members(uuid) to authenticated;
+grant execute on function public.update_company_member_role(uuid, uuid, text) to authenticated;
+grant execute on function public.remove_company_member(uuid, uuid) to authenticated;
 grant execute on function public.review_join_request(uuid, boolean, text) to authenticated;

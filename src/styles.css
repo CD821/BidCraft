@@ -2214,6 +2214,125 @@ textarea:focus,
   box-shadow: 0 0 0 2px rgba(242, 90, 22, 0.1);
 }
 
+.company-management-panel {
+  margin-top: 16px;
+}
+
+.role-badge {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid #ffd1bb;
+  border-radius: 999px;
+  color: var(--orange-dark);
+  background: var(--orange-soft);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.company-rename-form {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.company-rename-form label {
+  display: grid;
+  gap: 7px;
+  color: #34404d;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.company-rename-form input {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  outline: 0;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.company-rename-form input:focus,
+.member-row select:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 2px rgba(242, 90, 22, 0.1);
+}
+
+.member-list {
+  display: grid;
+  overflow: hidden;
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.member-row {
+  display: grid;
+  min-height: 64px;
+  grid-template-columns: minmax(210px, 1.4fr) 150px minmax(230px, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+  font-size: 11px;
+}
+
+.member-row:last-child {
+  border-bottom: 0;
+}
+
+.member-head {
+  min-height: 42px;
+  color: #5b6674;
+  background: #f7f8fa;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.member-row strong,
+.member-row span {
+  display: block;
+}
+
+.member-row div > span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.member-row select {
+  height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  outline: 0;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.member-access-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.member-access-actions > span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
 .company-list,
 .request-list {
   display: grid;
@@ -2382,6 +2501,15 @@ button.company-card:hover,
     flex-direction: column;
   }
 
+  .company-rename-form,
+  .member-row {
+    grid-template-columns: 1fr;
+  }
+
+  .member-head {
+    display: none;
+  }
+
   .mobile-menu {
     display: inline-grid;
   }
@@ -2489,6 +2617,11 @@ button.company-card:hover,
 
   .request-actions {
     justify-content: flex-end;
+  }
+
+  .member-access-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .project-tabs {

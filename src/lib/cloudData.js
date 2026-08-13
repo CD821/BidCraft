@@ -85,6 +85,13 @@ export async function createCloudCompany(name, userId) {
   return companyId;
 }
 
+export async function renameCloudCompany(companyId, name) {
+  return rpc("rename_company", {
+    target_company_id: companyId,
+    company_name: name,
+  });
+}
+
 export async function requestJoinCompany(companyId) {
   return rpc("request_join_company", { target_company_id: companyId });
 }
@@ -99,6 +106,26 @@ export async function reviewJoinRequest(requestId, approve, role = "estimator") 
     target_request_id: requestId,
     approve,
     member_role: role,
+  });
+}
+
+export async function listCompanyMembers(companyId) {
+  if (!companyId) return [];
+  return rpc("list_company_members", { target_company_id: companyId });
+}
+
+export async function updateCompanyMemberRole(companyId, userId, role) {
+  return rpc("update_company_member_role", {
+    target_company_id: companyId,
+    target_user_id: userId,
+    new_role: role,
+  });
+}
+
+export async function removeCompanyMember(companyId, userId) {
+  return rpc("remove_company_member", {
+    target_company_id: companyId,
+    target_user_id: userId,
   });
 }
 
@@ -138,11 +165,16 @@ export async function seedCompanyDefaults(companyId, companyName, userId) {
   const blankProject = {
     ...newProject(1),
     name: "New Estimate 1",
+    id: crypto.randomUUID(),
   };
   await upsertRows(
     "company_price_book_items",
     initialData.priceBook.map((item) =>
-      priceBookItemToRow(item, companyId, userId),
+      priceBookItemToRow(
+        { ...item, id: crypto.randomUUID() },
+        companyId,
+        userId,
+      ),
     ),
   );
   await upsertRows(

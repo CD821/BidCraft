@@ -19,14 +19,18 @@ import {
   createCloudCompany,
   deleteProjectFromCloud,
   importDataToCloud,
+  listCompanyMembers,
   listCompanies,
   listJoinRequests,
   loadCompanyData,
+  removeCompanyMember,
+  renameCloudCompany,
   requestJoinCompany,
   reviewJoinRequest,
   saveProjectToCloud,
   searchCompanies,
   syncPriceBookToCloud,
+  updateCompanyMemberRole,
   updateCompanySettings,
 } from "./lib/cloudData";
 import {
@@ -132,6 +136,7 @@ export default function App() {
     cloudEnabled ? localStorage.getItem(ACTIVE_COMPANY_KEY) || "" : "",
   );
   const [activeCloudCompany, setActiveCloudCompany] = useState(null);
+  const [companyMembers, setCompanyMembers] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [joinRequests, setJoinRequests] = useState([]);
   const [companySearchResults, setCompanySearchResults] = useState([]);
@@ -233,8 +238,12 @@ export default function App() {
       setActiveCloudCompany(company);
       setAuditLogs(logs || []);
       localStorage.setItem(ACTIVE_COMPANY_KEY, companyId);
-      const requests = await listJoinRequests(companyId).catch(() => []);
+      const [requests, members] = await Promise.all([
+        listJoinRequests(companyId).catch(() => []),
+        listCompanyMembers(companyId).catch(() => []),
+      ]);
       setJoinRequests(requests || []);
+      setCompanyMembers(members || []);
       setCloudMessage("");
       setView((current) => {
         if (!appData.projects.length) return "projects";
@@ -279,6 +288,7 @@ export default function App() {
       } else {
         setActiveCompanyId("");
         setActiveCloudCompany(null);
+        setCompanyMembers([]);
         setAuditLogs([]);
         setJoinRequests([]);
         setCloudMessage("Create a company or request to join one.");
@@ -344,6 +354,7 @@ export default function App() {
     setCompanies([]);
     setActiveCompanyId("");
     setActiveCloudCompany(null);
+    setCompanyMembers([]);
     setAuditLogs([]);
     setJoinRequests([]);
     setCompanySearchResults([]);
@@ -352,7 +363,11 @@ export default function App() {
   }
 
   async function handleCreateCompany(companyName) {
-    if (!cloudUserId) return;
+    if (!cloudUserId) {
+      setCloudMessage("You must be signed in before creating a company.");
+      toast("Sign in first, then create the company.", "error");
+      return false;
+    }
     setCloudLoading(true);
     try {
       const companyId = await createCloudCompany(companyName, cloudUserId);
@@ -360,9 +375,11 @@ export default function App() {
       setView("projects");
       writeRoute("/projects");
       toast("Company created.");
+      return true;
     } catch (error) {
       setCloudMessage(error.message || "Could not create company.");
       toast(error.message || "Could not create company.", "error");
+      return false;
     } finally {
       setCloudLoading(false);
     }
@@ -405,6 +422,8 @@ export default function App() {
       await reviewJoinRequest(requestId, approve);
       const requests = await listJoinRequests(activeCompanyId).catch(() => []);
       setJoinRequests(requests || []);
+      const members = await listCompanyMembers(activeCompanyId).catch(() => []);
+      setCompanyMembers(members || []);
       await activateCloudCompany(activeCompanyId);
       toast(approve ? "Member approved." : "Request rejected.");
     } catch (error) {
@@ -419,6 +438,57 @@ export default function App() {
     if (!cloudSession) return;
     await loadCloudCompanies(cloudSession, activeCompanyId);
     toast("Cloud data refreshed.", "info");
+  }
+
+  async function handleRenameCompany(companyName) {
+    if (!activeCompanyId) return;
+    setCloudLoading(true);
+    try {
+      await renameCloudCompany(activeCompanyId, companyName);
+      await loadCloudCompanies(cloudSession, activeCompanyId);
+      toast("Company name updated.");
+    } catch (error) {
+      setCloudMessage(error.message || "Could not rename company.");
+      toast(error.message || "Could not rename company.", "error");
+    } finally {
+      setCloudLoading(false);
+    }
+  }
+
+  async function handleUpdateMemberRole(userId, role) {
+    if (!activeCompanyId) return;
+    setCloudLoading(true);
+    try {
+      await updateCompanyMemberRole(activeCompanyId, userId, role);
+      const members = await listCompanyMembers(activeCompanyId).catch(() => []);
+      setCompanyMembers(members || []);
+      toast("Member role updated.");
+    } catch (error) {
+      setCloudMessage(error.message || "Could not update member role.");
+      toast(error.message || "Could not update member role.", "error");
+    } finally {
+      setCloudLoading(false);
+    }
+  }
+
+  async function handleRemoveMember(userId, label) {
+    if (!activeCompanyId) return;
+    if (!window.confirm(`Remove ${label || "this member"} from the company?`)) {
+      return;
+    }
+    setCloudLoading(true);
+    try {
+      await removeCompanyMember(activeCompanyId, userId);
+      const members = await listCompanyMembers(activeCompanyId).catch(() => []);
+      setCompanyMembers(members || []);
+      await loadCloudCompanies(cloudSession, activeCompanyId);
+      toast("Member access removed.");
+    } catch (error) {
+      setCloudMessage(error.message || "Could not remove member.");
+      toast(error.message || "Could not remove member.", "error");
+    } finally {
+      setCloudLoading(false);
+    }
   }
 
   function updateProject(nextProject) {
@@ -670,18 +740,23 @@ export default function App() {
         {showingWorkspace ? (
           <CompanyWorkspaceView
             activeCompanyId={activeCompanyId}
+            activeCompany={activeCloudCompany}
             companies={companies}
             companySearchResults={companySearchResults}
+            companyMembers={companyMembers}
             joinRequests={joinRequests}
             loading={cloudLoading}
             message={cloudMessage}
             onCreateCompany={handleCreateCompany}
             onRefresh={refreshCloudData}
+            onRemoveMember={handleRemoveMember}
+            onRenameCompany={handleRenameCompany}
             onRequestJoin={handleRequestJoin}
             onReviewJoinRequest={handleReviewJoinRequest}
             onSearchCompanies={handleSearchCompanies}
             onSelectCompany={activateCloudCompany}
             onSignOut={handleSignOut}
+            onUpdateMemberRole={handleUpdateMemberRole}
             session={cloudSession}
           />
         ) : null}

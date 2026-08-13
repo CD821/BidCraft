@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "./Icon";
+
+const roleOptions = ["owner", "admin", "estimator", "viewer"];
 
 function companyRole(company) {
   return company?.company_role || company?.role || "member";
@@ -7,34 +9,60 @@ function companyRole(company) {
 
 export function CompanyWorkspaceView({
   activeCompanyId,
+  activeCompany,
   companies,
   companySearchResults,
+  companyMembers,
   joinRequests,
   loading,
   message,
   onCreateCompany,
   onRefresh,
+  onRemoveMember,
+  onRenameCompany,
   onRequestJoin,
   onReviewJoinRequest,
   onSearchCompanies,
   onSelectCompany,
   onSignOut,
+  onUpdateMemberRole,
   session,
 }) {
   const [companyName, setCompanyName] = useState("");
+  const [renameDraft, setRenameDraft] = useState(activeCompany?.name || "");
   const [searchTerm, setSearchTerm] = useState("");
+  const activeCompanyRow = useMemo(
+    () => companies.find((company) => company.company_id === activeCompanyId),
+    [activeCompanyId, companies],
+  );
+  const activeRole = companyRole(activeCompanyRow);
+  const canManageCompany =
+    activeRole === "owner" ||
+    activeRole === "admin" ||
+    activeRole === "platform_admin";
+
+  useEffect(() => {
+    setRenameDraft(activeCompany?.name || activeCompanyRow?.company_name || "");
+  }, [activeCompany?.name, activeCompanyRow?.company_name]);
 
   async function createCompany(event) {
     event.preventDefault();
     const clean = companyName.trim();
     if (!clean) return;
-    await onCreateCompany(clean);
-    setCompanyName("");
+    const created = await onCreateCompany(clean);
+    if (created !== false) setCompanyName("");
   }
 
   async function searchCompanies(event) {
     event.preventDefault();
     await onSearchCompanies(searchTerm);
+  }
+
+  async function renameCompany(event) {
+    event.preventDefault();
+    const clean = renameDraft.trim();
+    if (!clean) return;
+    await onRenameCompany(clean);
   }
 
   return (
@@ -113,6 +141,105 @@ export function CompanyWorkspaceView({
             Create company
           </button>
         </form>
+      </section>
+
+      <section className="settings-panel company-management-panel">
+        <div className="settings-panel-heading">
+          <div>
+            <h3>Manage active company</h3>
+            <p>
+              Edit the company name, review people with access, and control
+              each member's role.
+            </p>
+          </div>
+          <span className="role-badge">{activeRole}</span>
+        </div>
+
+        <form className="company-rename-form" onSubmit={renameCompany}>
+          <label>
+            Company name
+            <input
+              disabled={!canManageCompany || loading}
+              onChange={(event) => setRenameDraft(event.target.value)}
+              value={renameDraft}
+            />
+          </label>
+          <button
+            className="button primary"
+            disabled={!canManageCompany || loading || !renameDraft.trim()}
+            type="submit"
+          >
+            <Icon name="save" size={17} />
+            Save company name
+          </button>
+        </form>
+
+        {!canManageCompany ? (
+          <p className="table-footnote">
+            Only owners and admins can rename companies, change roles, or remove
+            member access.
+          </p>
+        ) : null}
+
+        <div className="member-list" aria-label="Company members">
+          <div className="member-row member-head">
+            <span>Person</span>
+            <span>Role</span>
+            <span>Access</span>
+          </div>
+          {companyMembers.length ? (
+            companyMembers.map((member) => {
+              const label = member.full_name || member.email || member.user_id;
+              const isCurrentUser = member.user_id === session?.user?.id;
+              return (
+                <div className="member-row" key={member.user_id}>
+                  <div>
+                    <strong>{label}</strong>
+                    <span>{member.email || "No email"}</span>
+                  </div>
+                  <select
+                    disabled={!canManageCompany || loading}
+                    onChange={(event) =>
+                      onUpdateMemberRole(member.user_id, event.target.value)
+                    }
+                    value={member.role}
+                  >
+                    {roleOptions.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="member-access-actions">
+                    <span>
+                      Added{" "}
+                      {member.created_at
+                        ? new Date(member.created_at).toLocaleDateString()
+                        : "unknown"}
+                    </span>
+                    <button
+                      className="button secondary small"
+                      disabled={
+                        !canManageCompany ||
+                        loading ||
+                        (isCurrentUser && member.role === "owner")
+                      }
+                      onClick={() => onRemoveMember(member.user_id, label)}
+                      type="button"
+                    >
+                      Remove access
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="workspace-empty">
+              <Icon name="company" size={24} />
+              <span>No members loaded. Click Refresh.</span>
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="workspace-grid">
