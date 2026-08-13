@@ -18,16 +18,18 @@ function readFileAsDataUrl(file) {
   });
 }
 
-export function AttachmentsView({ project, toast, updateProject }) {
+export function AttachmentsView({ project, readOnly = false, toast, updateProject }) {
   const inputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
   const attachments = project.attachments || [];
 
   function patchAttachments(nextAttachments) {
+    if (readOnly) return;
     updateProject({ ...project, attachments: nextAttachments });
   }
 
   async function addFiles(event) {
+    if (readOnly) return;
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
     setIsUploading(true);
@@ -67,6 +69,7 @@ export function AttachmentsView({ project, toast, updateProject }) {
   }
 
   function updateAttachment(id, field, value) {
+    if (readOnly) return;
     patchAttachments(
       attachments.map((attachment) =>
         attachment.id === id ? { ...attachment, [field]: value } : attachment,
@@ -75,6 +78,7 @@ export function AttachmentsView({ project, toast, updateProject }) {
   }
 
   function deleteAttachment(id) {
+    if (readOnly) return;
     patchAttachments(attachments.filter((attachment) => attachment.id !== id));
     toast("Attachment removed.");
   }
@@ -85,14 +89,15 @@ export function AttachmentsView({ project, toast, updateProject }) {
         <div>
           <h2>Attachments</h2>
           <p>
-            Attach drawings, takeoff PDFs, photos, quote sheets, or notes to
-            this estimate. Files are saved with the project.
+            {readOnly
+              ? "You can view and download files attached to this estimate. Your role cannot attach or edit files."
+              : "Attach drawings, takeoff PDFs, photos, quote sheets, or notes to this estimate. Files are saved with the project."}
           </p>
         </div>
         <div className="material-heading-actions">
           <button
             className="button primary"
-            disabled={isUploading}
+            disabled={readOnly || isUploading}
             onClick={() => inputRef.current?.click()}
             type="button"
           >
@@ -141,6 +146,7 @@ export function AttachmentsView({ project, toast, updateProject }) {
               <input
                 aria-label="Attachment file name"
                 className="table-input text-strong"
+                disabled={readOnly}
                 onChange={(event) =>
                   updateAttachment(attachment.id, "name", event.target.value)
                 }
@@ -158,6 +164,7 @@ export function AttachmentsView({ project, toast, updateProject }) {
               <input
                 aria-label={`Notes for ${attachment.name}`}
                 className="table-input"
+                disabled={readOnly}
                 onChange={(event) =>
                   updateAttachment(attachment.id, "notes", event.target.value)
                 }
@@ -177,6 +184,7 @@ export function AttachmentsView({ project, toast, updateProject }) {
               <button
                 aria-label={`Delete ${attachment.name}`}
                 className="icon-button danger"
+                disabled={readOnly}
                 onClick={() => deleteAttachment(attachment.id)}
                 type="button"
               >
@@ -188,6 +196,7 @@ export function AttachmentsView({ project, toast, updateProject }) {
         {!attachments.length ? (
           <button
             className="empty-state attachment-empty"
+            disabled={readOnly}
             onClick={() => inputRef.current?.click()}
             type="button"
           >

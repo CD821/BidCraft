@@ -1,15 +1,23 @@
 # Supabase + Vercel Setup
 
-BidCraft v0.7 connects the Vite app to Supabase Auth and Postgres when the
+BidCraft v0.10 connects the Vite app to Supabase Auth and Postgres when the
 Vercel environment variables are present.
 
-## What v0.7 Includes
+## What v0.10 Includes
 
 - Email/password sign up and sign in through Supabase Auth.
 - Company workspace for creating companies and requesting access.
 - Company-scoped projects, price books, trades, and proposal settings.
-- Owner/admin join-request approval.
+- Owner/admin join-request approval, company rename, and member management.
+- Owner-only company deletion.
+- Role-based editing:
+  - `owner` and `admin`: manage company settings, users, price book, and estimates.
+  - `estimator`: create and edit estimates, materials, attachments, and proposals.
+  - `viewer`: view, print, export, and download only.
+  - `platform_admin`: admin-level access to all companies.
 - Change logs for project, price-book, and company-setting changes.
+- Explicit table grants for Supabase projects where new tables are not exposed
+  to the Data API automatically.
 - Local/offline fallback when Supabase variables are not configured.
 
 ## Intended Access Model
@@ -18,6 +26,7 @@ Vercel environment variables are present.
 - A user can create a company.
 - A user can request to join a company.
 - Company owners/admins approve users and assign roles.
+- Only owners can delete a company or assign/remove the owner role.
 - Each company has its own projects and price book.
 - Platform admins can list all companies.
 - Audit logs record inserts, updates, and deletes for company projects,

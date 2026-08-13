@@ -31,7 +31,13 @@ const emptyItem = {
   defaultWastePct: 0,
 };
 
-export function PriceBookView({ items, onChange, toast, tradeOptions }) {
+export function PriceBookView({
+  items,
+  onChange,
+  readOnly = false,
+  toast,
+  tradeOptions,
+}) {
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState(emptyItem);
 
@@ -47,6 +53,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
 
   function addItem(event) {
     event.preventDefault();
+    if (readOnly) return;
     if (!draft.item.trim()) return;
     onChange((current) => [
       ...current,
@@ -57,6 +64,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
   }
 
   function updateItem(id, field, value) {
+    if (readOnly) return;
     onChange((current) =>
       current.map((item) =>
         item.id === id
@@ -75,8 +83,9 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
         <div>
           <h2>Price Book</h2>
           <p>
-            Optional starting prices for new estimate lines. Every project
-            receives its own editable copy.
+            {readOnly
+              ? "You can view the shared price book. Only owners and admins can edit it."
+              : "Optional starting prices for new estimate lines. Every project receives its own editable copy."}
           </p>
         </div>
         <label className="search-field">
@@ -91,6 +100,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
 
       <form className="pricebook-add" onSubmit={addItem}>
         <input
+          disabled={readOnly}
           onChange={(event) =>
             setDraft((current) => ({ ...current, item: event.target.value }))
           }
@@ -98,6 +108,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
           value={draft.item}
         />
         <select
+          disabled={readOnly}
           onChange={(event) =>
             setDraft((current) => ({ ...current, trade: event.target.value }))
           }
@@ -108,6 +119,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
           ))}
         </select>
         <select
+          disabled={readOnly}
           onChange={(event) =>
             setDraft((current) => ({ ...current, unit: event.target.value }))
           }
@@ -117,7 +129,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
             <option key={unit}>{unit}</option>
           ))}
         </select>
-        <button className="button primary" type="submit">
+        <button className="button primary" disabled={readOnly} type="submit">
           <Icon name="plus" size={17} />
           Add item
         </button>
@@ -139,6 +151,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
           <div className="data-row pricebook-grid" key={item.id}>
             <input
               className="table-input text-strong"
+              disabled={readOnly}
               onChange={(event) =>
                 updateItem(item.id, "item", event.target.value)
               }
@@ -146,6 +159,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
             />
             <select
               className="table-input"
+              disabled={readOnly}
               onChange={(event) =>
                 updateItem(item.id, "trade", event.target.value)
               }
@@ -157,6 +171,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
             </select>
             <select
               className="table-input"
+              disabled={readOnly}
               onChange={(event) =>
                 updateItem(item.id, "unit", event.target.value)
               }
@@ -168,6 +183,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
             </select>
             <select
               className="table-input"
+              disabled={readOnly}
               onChange={(event) =>
                 updateItem(item.id, "materialCostMode", event.target.value)
               }
@@ -180,6 +196,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
               <span>$</span>
               <input
                 className="table-input"
+                disabled={readOnly}
                 min="0"
                 onChange={(event) =>
                   updateItem(
@@ -201,6 +218,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
             </label>
             <select
               className="table-input"
+              disabled={readOnly}
               onChange={(event) =>
                 updateItem(item.id, "laborCostMode", event.target.value)
               }
@@ -216,6 +234,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
                   <label className="number-cell">
                     <input
                       className="table-input"
+                      disabled={readOnly}
                       min="0"
                       onChange={(event) =>
                         updateItem(
@@ -234,6 +253,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
                     <span>$</span>
                     <input
                       className="table-input"
+                      disabled={readOnly}
                       min="0"
                       onChange={(event) =>
                         updateItem(item.id, "laborRate", event.target.value)
@@ -250,6 +270,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
                   <span>$</span>
                   <input
                     className="table-input"
+                    disabled={readOnly}
                     min="0"
                     onChange={(event) =>
                       updateItem(
@@ -275,6 +296,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
               <span>$</span>
               <input
                 className="table-input"
+                disabled={readOnly}
                 min="0"
                 onChange={(event) =>
                   updateItem(item.id, "otherUnit", event.target.value)
@@ -286,6 +308,7 @@ export function PriceBookView({ items, onChange, toast, tradeOptions }) {
             </label>
             <button
               className="icon-button danger"
+              disabled={readOnly}
               onClick={() =>
                 onChange((current) =>
                   current.filter((entry) => entry.id !== item.id),

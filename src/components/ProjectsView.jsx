@@ -8,6 +8,7 @@ export function ProjectsView({
   onDelete,
   onOpen,
   projects,
+  readOnly = false,
 }) {
   const [query, setQuery] = useState("");
   const filteredProjects = useMemo(() => {
@@ -30,6 +31,12 @@ export function ProjectsView({
         <div>
           <h2>Projects</h2>
           <p>Create estimates, track bid value, and reopen work in progress.</p>
+          {readOnly ? (
+            <p className="table-footnote">
+              Read-only access. Owners, admins, or estimators can create and
+              delete estimates.
+            </p>
+          ) : null}
         </div>
         <div className="projects-heading-actions">
           <label className="search-field project-search">
@@ -40,7 +47,12 @@ export function ProjectsView({
               value={query}
             />
           </label>
-          <button className="button primary" onClick={onCreate} type="button">
+          <button
+            className="button primary"
+            disabled={readOnly}
+            onClick={onCreate}
+            type="button"
+          >
             <Icon name="plus" size={18} />
             New estimate
           </button>
@@ -91,6 +103,7 @@ export function ProjectsView({
                 </button>
                 <button
                   className="icon-button danger"
+                  disabled={readOnly}
                   onClick={() => onDelete(project.id)}
                   type="button"
                 >

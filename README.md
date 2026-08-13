@@ -21,6 +21,8 @@ affecting the Price Book or any other estimate.
 - Optional Supabase login mode
 - Create/select companies
 - Edit company names and manage company member roles/access
+- Owner-only company deletion
+- Role permissions for owner, admin, estimator, viewer, and platform admin
 - Company-scoped projects, price books, trades, and proposal settings
 - Join-company requests with owner/admin approval
 - Supabase audit logs for project, price-book, and company-setting changes

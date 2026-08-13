@@ -97,6 +97,7 @@ export function EstimateView({
   onOpenProposal,
   priceBook,
   project,
+  readOnly = false,
   tradeOptions,
   updateProject,
 }) {
@@ -116,10 +117,12 @@ export function EstimateView({
   }, [query, totals.lines]);
 
   function patchProject(patch) {
+    if (readOnly) return;
     updateProject({ ...project, ...patch });
   }
 
   function updateLine(id, field, value) {
+    if (readOnly) return;
     patchProject({
       lines: project.lines.map((line) =>
         line.id === id
@@ -133,6 +136,7 @@ export function EstimateView({
   }
 
   function addLine(item) {
+    if (readOnly) return;
     const line = item
       ? {
           id: crypto.randomUUID(),
@@ -177,6 +181,7 @@ export function EstimateView({
   }
 
   function duplicateSelected() {
+    if (readOnly) return;
     const source = project.lines.find((line) => line.id === selectedLineId);
     if (!source) return;
     const copy = { ...source, id: crypto.randomUUID(), item: `${source.item} copy` };
@@ -185,6 +190,7 @@ export function EstimateView({
   }
 
   function deleteSelected() {
+    if (readOnly) return;
     if (!selectedLineId) return;
     patchProject({
       lines: project.lines.filter((line) => line.id !== selectedLineId),
@@ -200,6 +206,7 @@ export function EstimateView({
             <label>
               <span>Project name</span>
               <input
+                disabled={readOnly}
                 onChange={(event) =>
                   patchProject({ name: event.target.value })
                 }
@@ -209,6 +216,7 @@ export function EstimateView({
             <label>
               <span>Client</span>
               <input
+                disabled={readOnly}
                 onChange={(event) =>
                   patchProject({ client: event.target.value })
                 }
@@ -219,6 +227,7 @@ export function EstimateView({
             <label>
               <span>Proposal #</span>
               <input
+                disabled={readOnly}
                 onChange={(event) =>
                   patchProject({ proposalNumber: event.target.value })
                 }
@@ -228,6 +237,7 @@ export function EstimateView({
             <label>
               <span>Status</span>
               <select
+                disabled={readOnly}
                 onChange={(event) =>
                   patchProject({ status: event.target.value })
                 }
@@ -246,6 +256,7 @@ export function EstimateView({
             <div className="toolbar-group">
               <button
                 className="button primary"
+                disabled={readOnly}
                 onClick={() => setPickerOpen(true)}
                 type="button"
               >
@@ -254,7 +265,7 @@ export function EstimateView({
               </button>
               <button
                 className="button secondary"
-                disabled={!selectedLineId}
+                disabled={readOnly || !selectedLineId}
                 onClick={duplicateSelected}
                 type="button"
               >
@@ -263,7 +274,7 @@ export function EstimateView({
               </button>
               <button
                 className="button secondary"
-                disabled={!selectedLineId}
+                disabled={readOnly || !selectedLineId}
                 onClick={deleteSelected}
                 type="button"
               >
@@ -284,9 +295,18 @@ export function EstimateView({
           <div className="estimate-rate-note">
             <Icon name="check" size={16} />
             <span>
-              <strong>Project-specific pricing.</strong> Rates changed below
-              apply only to this estimate. Price Book values are copied as
-              starting points.
+              {readOnly ? (
+                <>
+                  <strong>Read-only access.</strong> Your role can view this
+                  estimate, but owners, admins, or estimators must make changes.
+                </>
+              ) : (
+                <>
+                  <strong>Project-specific pricing.</strong> Rates changed
+                  below apply only to this estimate. Price Book values are
+                  copied as starting points.
+                </>
+              )}
             </span>
           </div>
 
@@ -314,6 +334,7 @@ export function EstimateView({
                   <div className="item-cell">
                     <input
                       className="table-input text-strong"
+                      disabled={readOnly}
                       onChange={(event) =>
                         updateLine(line.id, "item", event.target.value)
                       }
@@ -321,6 +342,7 @@ export function EstimateView({
                     />
                     <input
                       className="table-input description-input"
+                      disabled={readOnly}
                       onChange={(event) =>
                         updateLine(line.id, "description", event.target.value)
                       }
@@ -330,6 +352,7 @@ export function EstimateView({
                   </div>
                   <select
                     className="table-input"
+                    disabled={readOnly}
                     onChange={(event) =>
                       updateLine(line.id, "trade", event.target.value)
                     }
@@ -341,6 +364,7 @@ export function EstimateView({
                   </select>
                   <input
                     className="table-input number-input"
+                    disabled={readOnly}
                     min="0"
                     onChange={(event) =>
                       updateLine(line.id, "qty", event.target.value)
@@ -351,6 +375,7 @@ export function EstimateView({
                   />
                   <select
                     className="table-input"
+                    disabled={readOnly}
                     onChange={(event) =>
                       updateLine(line.id, "unit", event.target.value)
                     }
@@ -363,6 +388,7 @@ export function EstimateView({
                   <label className="number-cell">
                     <input
                       className="table-input number-input"
+                      disabled={readOnly}
                       min="0"
                       onChange={(event) =>
                         updateLine(line.id, "wastePct", event.target.value)
@@ -380,6 +406,7 @@ export function EstimateView({
                     <select
                       aria-label={`Material cost method for ${line.item}`}
                       className="cost-mode-select"
+                      disabled={readOnly}
                       onChange={(event) =>
                         updateLine(
                           line.id,
@@ -396,6 +423,7 @@ export function EstimateView({
                       <span>$</span>
                       <input
                         className="table-input"
+                        disabled={readOnly}
                         min="0"
                         onChange={(event) =>
                           updateLine(
@@ -432,6 +460,7 @@ export function EstimateView({
                     <select
                       aria-label={`Labor cost method for ${line.item}`}
                       className="cost-mode-select"
+                      disabled={readOnly}
                       onChange={(event) =>
                         updateLine(
                           line.id,
@@ -450,6 +479,7 @@ export function EstimateView({
                         <label>
                           <input
                             className="table-input"
+                            disabled={readOnly}
                             min="0"
                             onChange={(event) =>
                               updateLine(
@@ -468,6 +498,7 @@ export function EstimateView({
                           <span>$</span>
                           <input
                             className="table-input"
+                            disabled={readOnly}
                             min="0"
                             onChange={(event) =>
                               updateLine(
@@ -488,6 +519,7 @@ export function EstimateView({
                         <span>$</span>
                         <input
                           className="table-input"
+                          disabled={readOnly}
                           min="0"
                           onChange={(event) =>
                             updateLine(
@@ -524,6 +556,7 @@ export function EstimateView({
                       <span>$</span>
                       <input
                         className="table-input"
+                        disabled={readOnly}
                         min="0"
                         onChange={(event) =>
                           updateLine(line.id, "otherUnit", event.target.value)
@@ -543,6 +576,7 @@ export function EstimateView({
                 <button
                   className="empty-table"
                   onClick={() => setPickerOpen(true)}
+                  disabled={readOnly}
                   type="button"
                 >
                   <Icon name="plus" />
@@ -561,6 +595,7 @@ export function EstimateView({
             <label>
               <span>Scope of Work</span>
               <textarea
+                disabled={readOnly}
                 onChange={(event) => patchProject({ scope: event.target.value })}
                 rows="4"
                 value={project.scope}
@@ -569,6 +604,7 @@ export function EstimateView({
             <label>
               <span>Exclusions</span>
               <textarea
+                disabled={readOnly}
                 onChange={(event) =>
                   patchProject({ exclusions: event.target.value })
                 }
@@ -608,6 +644,7 @@ export function EstimateView({
               <span>Overhead</span>
               <span className="percent-input">
                 <input
+                  disabled={readOnly}
                   min="0"
                   onChange={(event) =>
                     patchProject({ overheadPct: Number(event.target.value) })
@@ -624,6 +661,7 @@ export function EstimateView({
               <span>Profit markup</span>
               <span className="percent-input">
                 <input
+                  disabled={readOnly}
                   min="0"
                   onChange={(event) =>
                     patchProject({ profitPct: Number(event.target.value) })
@@ -640,6 +678,7 @@ export function EstimateView({
               <span>Tax</span>
               <span className="percent-input">
                 <input
+                  disabled={readOnly}
                   min="0"
                   onChange={(event) =>
                     patchProject({ taxPct: Number(event.target.value) })
@@ -655,6 +694,7 @@ export function EstimateView({
             <label className="tax-mode">
               <span>Apply tax to</span>
               <select
+                disabled={readOnly}
                 onChange={(event) =>
                   patchProject({ taxMode: event.target.value })
                 }

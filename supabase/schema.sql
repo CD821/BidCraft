@@ -260,6 +260,49 @@ begin
 end;
 $$;
 
+create or replace function public.delete_company(target_company_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_name text;
+begin
+  if not public.has_company_role(target_company_id, array['owner']) then
+    raise exception 'Only company owners can delete a company';
+  end if;
+
+  select name into target_name
+  from public.companies
+  where id = target_company_id;
+
+  if target_name is null then
+    raise exception 'Company not found';
+  end if;
+
+  insert into public.audit_logs (
+    company_id,
+    actor_user_id,
+    action,
+    entity_type,
+    entity_id,
+    before_data
+  )
+  values (
+    null,
+    auth.uid(),
+    'delete',
+    'companies',
+    target_company_id,
+    jsonb_build_object('name', target_name)
+  );
+
+  delete from public.companies
+  where id = target_company_id;
+end;
+$$;
+
 create or replace function public.list_my_companies()
 returns table (
   company_id uuid,
@@ -403,6 +446,8 @@ set search_path = public
 as $$
 declare
   clean_role text;
+  acting_role text;
+  acting_platform_admin boolean;
   target_current_role text;
   owner_count integer;
 begin
@@ -415,6 +460,12 @@ begin
     raise exception 'Only company owners and admins can change roles';
   end if;
 
+  acting_platform_admin = public.is_platform_admin();
+  select role into acting_role
+  from public.company_members
+  where company_id = target_company_id
+    and user_id = auth.uid();
+
   select role into target_current_role
   from public.company_members
   where company_id = target_company_id
@@ -422,6 +473,18 @@ begin
 
   if target_current_role is null then
     raise exception 'Company member not found';
+  end if;
+
+  if not acting_platform_admin
+    and clean_role = 'owner'
+    and coalesce(acting_role, '') <> 'owner' then
+    raise exception 'Only owners can assign the owner role';
+  end if;
+
+  if not acting_platform_admin
+    and target_current_role = 'owner'
+    and coalesce(acting_role, '') <> 'owner' then
+    raise exception 'Only owners can change another owner';
   end if;
 
   if target_current_role = 'owner' and clean_role <> 'owner' then
@@ -471,12 +534,20 @@ security definer
 set search_path = public
 as $$
 declare
+  acting_role text;
+  acting_platform_admin boolean;
   target_current_role text;
   owner_count integer;
 begin
   if not public.has_company_role(target_company_id, array['owner', 'admin']) then
     raise exception 'Only company owners and admins can remove members';
   end if;
+
+  acting_platform_admin = public.is_platform_admin();
+  select role into acting_role
+  from public.company_members
+  where company_id = target_company_id
+    and user_id = auth.uid();
 
   select role into target_current_role
   from public.company_members
@@ -485,6 +556,12 @@ begin
 
   if target_current_role is null then
     raise exception 'Company member not found';
+  end if;
+
+  if not acting_platform_admin
+    and target_current_role = 'owner'
+    and coalesce(acting_role, '') <> 'owner' then
+    raise exception 'Only owners can remove another owner';
   end if;
 
   if target_current_role = 'owner' then
@@ -685,7 +762,7 @@ for each row execute function public.touch_updated_at();
 
 drop trigger if exists audit_company_settings on public.companies;
 create trigger audit_company_settings
-after update or delete on public.companies
+after update on public.companies
 for each row execute function public.audit_company_settings();
 
 drop trigger if exists touch_price_book_items on public.company_price_book_items;
@@ -743,6 +820,11 @@ on public.companies for update
 using (public.has_company_role(id, array['owner', 'admin']))
 with check (public.has_company_role(id, array['owner', 'admin']));
 
+drop policy if exists "companies_delete_owners" on public.companies;
+create policy "companies_delete_owners"
+on public.companies for delete
+using (public.has_company_role(id, array['owner']));
+
 drop policy if exists "members_select_same_company" on public.company_members;
 create policy "members_select_same_company"
 on public.company_members for select
@@ -779,10 +861,11 @@ on public.company_price_book_items for select
 using (public.is_company_member(company_id));
 
 drop policy if exists "price_book_estimators_write" on public.company_price_book_items;
-create policy "price_book_estimators_write"
+drop policy if exists "price_book_admins_write" on public.company_price_book_items;
+create policy "price_book_admins_write"
 on public.company_price_book_items for all
-using (public.has_company_role(company_id, array['owner', 'admin', 'estimator']))
-with check (public.has_company_role(company_id, array['owner', 'admin', 'estimator']));
+using (public.has_company_role(company_id, array['owner', 'admin']))
+with check (public.has_company_role(company_id, array['owner', 'admin']));
 
 drop policy if exists "projects_member_select" on public.company_projects;
 create policy "projects_member_select"
@@ -800,8 +883,30 @@ create policy "audit_logs_member_select"
 on public.audit_logs for select
 using (public.is_company_member(company_id));
 
+grant usage on schema public to authenticated;
+grant select, update on table public.profiles to authenticated;
+grant select, insert, update, delete on table public.companies to authenticated;
+grant select, insert, update, delete on table public.company_members to authenticated;
+grant select, insert, update, delete on table public.company_join_requests to authenticated;
+grant select, insert, update, delete on table public.company_price_book_items to authenticated;
+grant select, insert, update, delete on table public.company_projects to authenticated;
+grant select on table public.audit_logs to authenticated;
+
+revoke all on function public.create_company(text) from public, anon;
+revoke all on function public.rename_company(uuid, text) from public, anon;
+revoke all on function public.delete_company(uuid) from public, anon;
+revoke all on function public.list_my_companies() from public, anon;
+revoke all on function public.search_companies(text) from public, anon;
+revoke all on function public.request_join_company(uuid) from public, anon;
+revoke all on function public.list_join_requests(uuid) from public, anon;
+revoke all on function public.list_company_members(uuid) from public, anon;
+revoke all on function public.update_company_member_role(uuid, uuid, text) from public, anon;
+revoke all on function public.remove_company_member(uuid, uuid) from public, anon;
+revoke all on function public.review_join_request(uuid, boolean, text) from public, anon;
+
 grant execute on function public.create_company(text) to authenticated;
 grant execute on function public.rename_company(uuid, text) to authenticated;
+grant execute on function public.delete_company(uuid) to authenticated;
 grant execute on function public.list_my_companies() to authenticated;
 grant execute on function public.search_companies(text) to authenticated;
 grant execute on function public.request_join_company(uuid) to authenticated;

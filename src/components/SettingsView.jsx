@@ -10,6 +10,7 @@ export function SettingsView({
   onRefreshCloud,
   onReset,
   onTradesChange,
+  readOnly = false,
   toast,
   tradeOptions,
 }) {
@@ -43,6 +44,7 @@ export function SettingsView({
   }
 
   async function importBackup(event) {
+    if (readOnly) return;
     const file = event.target.files?.[0];
     if (!file) return;
     try {
@@ -61,6 +63,7 @@ export function SettingsView({
 
   function addTrade(event) {
     event.preventDefault();
+    if (readOnly) return;
     const clean = tradeDraft.trim();
     if (!clean) return;
     if (
@@ -77,6 +80,7 @@ export function SettingsView({
   }
 
   function removeTrade(targetTrade) {
+    if (readOnly) return;
     if (usedTrades.has(targetTrade.toLowerCase())) {
       toast("Move existing items before removing that trade.", "error");
       return;
@@ -118,18 +122,20 @@ export function SettingsView({
           <div>
             <h3>Trades</h3>
             <p>
-              Add trades here, then use them in estimate lines and price-book
-              items.
+              {readOnly
+                ? "You can view company trades. Only owners and admins can edit them."
+                : "Add trades here, then use them in estimate lines and price-book items."}
             </p>
           </div>
         </div>
         <form className="trade-add-form" onSubmit={addTrade}>
           <input
+            disabled={readOnly}
             onChange={(event) => setTradeDraft(event.target.value)}
             placeholder="New trade name, e.g. Low Voltage"
             value={tradeDraft}
           />
-          <button className="button primary" type="submit">
+          <button className="button primary" disabled={readOnly} type="submit">
             <Icon name="plus" size={17} />
             Add trade
           </button>
@@ -146,7 +152,7 @@ export function SettingsView({
                       ? `${trade} is in use`
                       : `Remove ${trade}`
                   }
-                  disabled={inUse}
+                  disabled={readOnly || inUse}
                   onClick={() => removeTrade(trade)}
                   title={
                     inUse
@@ -177,6 +183,7 @@ export function SettingsView({
         </div>
         <button
           className="button secondary"
+          disabled={readOnly}
           onClick={() => inputRef.current?.click()}
           type="button"
         >
@@ -201,7 +208,12 @@ export function SettingsView({
               : "Replace local data with the original example project."}
           </p>
         </div>
-        <button className="button danger-button" onClick={onReset} type="button">
+        <button
+          className="button danger-button"
+          disabled={readOnly}
+          onClick={onReset}
+          type="button"
+        >
           Reset app
         </button>
       </section>

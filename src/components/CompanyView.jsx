@@ -1,5 +1,6 @@
-export function CompanyView({ company, onChange }) {
+export function CompanyView({ company, onChange, readOnly = false }) {
   function update(field, value) {
+    if (readOnly) return;
     onChange({ ...company, [field]: value });
   }
 
@@ -8,7 +9,11 @@ export function CompanyView({ company, onChange }) {
       <div className="page-heading">
         <div>
           <h2>Company</h2>
-          <p>This information appears on printed proposals.</p>
+          <p>
+            {readOnly
+              ? "This information appears on printed proposals. Only owners and admins can edit it."
+              : "This information appears on printed proposals."}
+          </p>
         </div>
       </div>
 
@@ -17,6 +22,7 @@ export function CompanyView({ company, onChange }) {
           <label>
             Company name
             <input
+              disabled={readOnly}
               onChange={(event) => update("name", event.target.value)}
               value={company.name}
             />
@@ -24,6 +30,7 @@ export function CompanyView({ company, onChange }) {
           <label>
             License number
             <input
+              disabled={readOnly}
               onChange={(event) => update("license", event.target.value)}
               value={company.license}
             />
@@ -31,6 +38,7 @@ export function CompanyView({ company, onChange }) {
           <label>
             Street address
             <input
+              disabled={readOnly}
               onChange={(event) => update("address", event.target.value)}
               value={company.address}
             />
@@ -38,6 +46,7 @@ export function CompanyView({ company, onChange }) {
           <label>
             City, state, ZIP
             <input
+              disabled={readOnly}
               onChange={(event) => update("cityStateZip", event.target.value)}
               value={company.cityStateZip}
             />
@@ -45,6 +54,7 @@ export function CompanyView({ company, onChange }) {
           <label>
             Phone
             <input
+              disabled={readOnly}
               onChange={(event) => update("phone", event.target.value)}
               value={company.phone}
             />
@@ -52,6 +62,7 @@ export function CompanyView({ company, onChange }) {
           <label>
             Email
             <input
+              disabled={readOnly}
               onChange={(event) => update("email", event.target.value)}
               type="email"
               value={company.email}

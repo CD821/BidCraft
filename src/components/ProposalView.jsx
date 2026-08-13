@@ -19,12 +19,14 @@ export function ProposalView({
   company,
   onPrint,
   project,
+  readOnly = false,
   updateProject,
 }) {
   const totals = projectTotals(project);
   const groups = groupProposalLines(project, totals);
 
   function patchProject(patch) {
+    if (readOnly) return;
     updateProject({ ...project, ...patch });
   }
 
@@ -32,10 +34,17 @@ export function ProposalView({
     <div className="proposal-workspace">
       <aside className="proposal-settings">
         <h2>Proposal Settings</h2>
+        {readOnly ? (
+          <p className="table-footnote">
+            Read-only access. You can review and print this proposal, but you
+            cannot edit the estimate.
+          </p>
+        ) : null}
         <div className="form-grid two-column compact">
           <label className="span-two">
             Project name
             <input
+              disabled={readOnly}
               onChange={(event) =>
                 patchProject({ name: event.target.value })
               }
@@ -45,6 +54,7 @@ export function ProposalView({
           <label>
             Client
             <input
+              disabled={readOnly}
               onChange={(event) =>
                 patchProject({ client: event.target.value })
               }
@@ -54,6 +64,7 @@ export function ProposalView({
           <label>
             Proposal #
             <input
+              disabled={readOnly}
               onChange={(event) =>
                 patchProject({ proposalNumber: event.target.value })
               }
@@ -63,6 +74,7 @@ export function ProposalView({
           <label className="span-two">
             Project address
             <textarea
+              disabled={readOnly}
               onChange={(event) =>
                 patchProject({ address: event.target.value })
               }
@@ -73,6 +85,7 @@ export function ProposalView({
           <label>
             Date
             <input
+              disabled={readOnly}
               onChange={(event) => patchProject({ date: event.target.value })}
               type="date"
               value={project.date}
@@ -81,6 +94,7 @@ export function ProposalView({
           <label>
             Valid through
             <input
+              disabled={readOnly}
               onChange={(event) =>
                 patchProject({ validThrough: event.target.value })
               }
@@ -97,6 +111,7 @@ export function ProposalView({
           </span>
           <input
             checked={project.showQuantities}
+            disabled={readOnly}
             onChange={(event) =>
               patchProject({ showQuantities: event.target.checked })
             }
@@ -110,6 +125,7 @@ export function ProposalView({
           </span>
           <input
             checked={project.showUnitPrices}
+            disabled={readOnly}
             onChange={(event) =>
               patchProject({ showUnitPrices: event.target.checked })
             }
@@ -126,6 +142,7 @@ export function ProposalView({
           <label className="proposal-text-field" key={field}>
             <span>{label}</span>
             <textarea
+              disabled={readOnly}
               onChange={(event) => patchProject({ [field]: event.target.value })}
               rows="5"
               value={project[field]}

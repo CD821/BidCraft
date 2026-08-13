@@ -92,6 +92,10 @@ export async function renameCloudCompany(companyId, name) {
   });
 }
 
+export async function deleteCloudCompany(companyId) {
+  return rpc("delete_company", { target_company_id: companyId });
+}
+
 export async function requestJoinCompany(companyId) {
   return rpc("request_join_company", { target_company_id: companyId });
 }

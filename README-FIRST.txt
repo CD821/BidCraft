@@ -1,8 +1,15 @@
-BIDCRAFT v0.6 - QUICK START
+BIDCRAFT v0.10 - QUICK START
 ===========================
 
 WHAT'S NEW
 
+- Added company role permissions:
+  owner/admin can manage company settings, members, and price book.
+  estimator can create and edit estimates.
+  viewer can view, print, export, and download, but cannot edit.
+- Added a company delete button for owners in Workspace.
+- Fixed the Supabase company-delete trigger issue.
+- Added explicit Supabase Data API grants for newer Supabase projects.
 - Edit project name, client, proposal number, and status from the Estimate tab.
 - Added Supabase/Vercel planning files for future logins, companies, and audit logs.
 - Add and manage trades from Settings.

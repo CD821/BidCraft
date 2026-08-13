@@ -17,6 +17,7 @@ import { initialData, newProject, trades as defaultTrades } from "./data/seed";
 import { usePersistentState } from "./hooks/usePersistentState";
 import {
   createCloudCompany,
+  deleteCloudCompany,
   deleteProjectFromCloud,
   importDataToCloud,
   listCompanyMembers,
@@ -45,6 +46,9 @@ import {
 const ACTIVE_COMPANY_KEY = "bidcraft:active-company";
 const estimateTabs = new Set(["estimate", "materials", "attachments", "proposal"]);
 const clone = (value) => JSON.parse(JSON.stringify(value));
+const projectEditorRoles = new Set(["owner", "admin", "estimator", "platform_admin"]);
+const managerRoles = new Set(["owner", "admin", "platform_admin"]);
+const ownerRoles = new Set(["owner", "platform_admin"]);
 
 function parseRoute(pathname = window.location.pathname) {
   const segments = pathname.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
@@ -151,6 +155,16 @@ export default function App() {
     [activeProjectId, data.projects],
   );
   const tradeOptions = useMemo(() => uniqueTrades(data), [data]);
+  const activeCompanyRow = useMemo(
+    () => companies.find((company) => company.company_id === activeCompanyId),
+    [activeCompanyId, companies],
+  );
+  const activeCompanyRole =
+    activeCompanyRow?.company_role || activeCompanyRow?.role || "";
+  const canEditProjects = !cloudActive || projectEditorRoles.has(activeCompanyRole);
+  const canManageCompany = !cloudActive || managerRoles.has(activeCompanyRole);
+  const canManagePriceBook = !cloudActive || managerRoles.has(activeCompanyRole);
+  const canDeleteCompany = cloudActive && ownerRoles.has(activeCompanyRole);
 
   useEffect(() => {
     function captureInstall(event) {
@@ -491,7 +505,43 @@ export default function App() {
     }
   }
 
+  async function handleDeleteCompany() {
+    if (!activeCompanyId || !activeCloudCompany) return;
+    const companyName = activeCloudCompany.name || "this company";
+    const typed = window.prompt(
+      `This permanently deletes "${companyName}" and all its estimates, price book items, materials, and attachments.\n\nType the company name to confirm:`,
+    );
+    if (typed !== companyName) {
+      toast("Company delete cancelled.", "info");
+      return;
+    }
+
+    setCloudLoading(true);
+    try {
+      await deleteCloudCompany(activeCompanyId);
+      if (localStorage.getItem(ACTIVE_COMPANY_KEY) === activeCompanyId) {
+        localStorage.removeItem(ACTIVE_COMPANY_KEY);
+      }
+      setActiveCompanyId("");
+      setActiveCloudCompany(null);
+      setCompanyMembers([]);
+      setJoinRequests([]);
+      setAuditLogs([]);
+      await loadCloudCompanies(cloudSession, "");
+      toast("Company deleted.");
+    } catch (error) {
+      setCloudMessage(error.message || "Could not delete company.");
+      toast(error.message || "Could not delete company.", "error");
+    } finally {
+      setCloudLoading(false);
+    }
+  }
+
   function updateProject(nextProject) {
+    if (!canEditProjects) {
+      toast("Your role can view estimates but cannot edit them.", "error");
+      return;
+    }
     setData((current) => ({
       ...current,
       projects: current.projects.map((entry) =>
@@ -506,6 +556,10 @@ export default function App() {
   }
 
   function setPriceBook(updater) {
+    if (!canManagePriceBook) {
+      toast("Only owners and admins can edit the shared price book.", "error");
+      return;
+    }
     setData((current) => {
       const nextPriceBook =
         typeof updater === "function" ? updater(current.priceBook) : updater;
@@ -524,6 +578,10 @@ export default function App() {
   }
 
   function setTrades(nextTrades) {
+    if (!canManageCompany) {
+      toast("Only owners and admins can edit company trades.", "error");
+      return;
+    }
     setData((current) => {
       const nextData = {
         ...current,
@@ -540,6 +598,10 @@ export default function App() {
   }
 
   function updateCompanyInfo(company) {
+    if (!canManageCompany) {
+      toast("Only owners and admins can edit company information.", "error");
+      return;
+    }
     setData((current) => {
       const nextData = { ...current, company };
       if (cloudActive) {
@@ -553,6 +615,10 @@ export default function App() {
   }
 
   function createProject() {
+    if (!canEditProjects) {
+      toast("Your role can view estimates but cannot create them.", "error");
+      return;
+    }
     const next = newProject(data.projects.length + 1);
     setData((current) => ({
       ...current,
@@ -571,6 +637,10 @@ export default function App() {
   }
 
   function deleteProject(id) {
+    if (!canEditProjects) {
+      toast("Your role can view estimates but cannot delete them.", "error");
+      return;
+    }
     const target = data.projects.find((entry) => entry.id === id);
     if (!target) return;
     if (!window.confirm(`Delete "${target.name}"? This cannot be undone.`)) {
@@ -645,6 +715,10 @@ export default function App() {
   }
 
   async function importBackup(imported) {
+    if (cloudActive && !canManageCompany) {
+      toast("Only owners and admins can import company backups.", "error");
+      return;
+    }
     setData(imported);
     setActiveProjectId(imported.projects[0]?.id || null);
     setView("projects");
@@ -673,7 +747,12 @@ export default function App() {
     view === "estimate" || view === "projects" ? "projects" : view;
   const showingWorkspace =
     cloudEnabled && cloudSession && (view === "cloud" || !activeCompanyId);
-  const cloudSaveStatus = cloudActive ? "Saved to cloud" : "Saved locally";
+  const cloudSaveStatus =
+    cloudActive && !canEditProjects
+      ? "Read-only access"
+      : cloudActive
+        ? "Saved to cloud"
+        : "Saved locally";
 
   if (cloudEnabled && cloudLoading && !cloudSession && !companies.length) {
     return (
@@ -748,6 +827,8 @@ export default function App() {
             loading={cloudLoading}
             message={cloudMessage}
             onCreateCompany={handleCreateCompany}
+            onDeleteCompany={handleDeleteCompany}
+            canDeleteCompany={canDeleteCompany}
             onRefresh={refreshCloudData}
             onRemoveMember={handleRemoveMember}
             onRenameCompany={handleRenameCompany}
@@ -765,7 +846,7 @@ export default function App() {
           <>
             <Topbar
               onMenu={() => setMobileOpen(true)}
-              onNew={createProject}
+              onNew={canEditProjects ? createProject : undefined}
               onPrint={printProposal}
               onSave={saveProject}
               project={project}
@@ -792,6 +873,7 @@ export default function App() {
             <div className="tab-content">
               {projectTab === "estimate" ? (
                 <EstimateView
+                  readOnly={!canEditProjects}
                   onOpenProposal={() => changeProjectTab("proposal")}
                   priceBook={data.priceBook}
                   project={project}
@@ -802,6 +884,7 @@ export default function App() {
               {projectTab === "materials" ? (
                 <MaterialsView
                   project={project}
+                  readOnly={!canEditProjects}
                   toast={toast}
                   updateProject={updateProject}
                 />
@@ -809,6 +892,7 @@ export default function App() {
               {projectTab === "attachments" ? (
                 <AttachmentsView
                   project={project}
+                  readOnly={!canEditProjects}
                   toast={toast}
                   updateProject={updateProject}
                 />
@@ -818,6 +902,7 @@ export default function App() {
                   company={data.company}
                   onPrint={printProposal}
                   project={project}
+                  readOnly={!canEditProjects}
                   updateProject={updateProject}
                 />
               ) : null}
@@ -829,7 +914,7 @@ export default function App() {
           <>
             <Topbar
               onMenu={() => setMobileOpen(true)}
-              onNew={createProject}
+              onNew={canEditProjects ? createProject : undefined}
               title="Projects"
             />
             <ProjectsView
@@ -838,6 +923,7 @@ export default function App() {
               onDelete={deleteProject}
               onOpen={openProject}
               projects={data.projects}
+              readOnly={!canEditProjects}
             />
           </>
         ) : null}
@@ -848,6 +934,7 @@ export default function App() {
             <PriceBookView
               items={data.priceBook}
               onChange={setPriceBook}
+              readOnly={!canManagePriceBook}
               toast={toast}
               tradeOptions={tradeOptions}
             />
@@ -857,7 +944,11 @@ export default function App() {
         {!showingWorkspace && view === "company" ? (
           <>
             <Topbar onMenu={() => setMobileOpen(true)} title="Company" />
-            <CompanyView company={data.company} onChange={updateCompanyInfo} />
+            <CompanyView
+              company={data.company}
+              onChange={updateCompanyInfo}
+              readOnly={!canManageCompany}
+            />
           </>
         ) : null}
 
@@ -873,6 +964,7 @@ export default function App() {
               onRefreshCloud={refreshCloudData}
               onReset={resetDemoData}
               onTradesChange={setTrades}
+              readOnly={!canManageCompany}
               toast={toast}
               tradeOptions={tradeOptions}
             />

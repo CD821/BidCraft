@@ -62,7 +62,7 @@ function SortableHeader({ align = "", label, onSort, sort, sortKey }) {
   );
 }
 
-export function MaterialsView({ project, toast, updateProject }) {
+export function MaterialsView({ project, readOnly = false, toast, updateProject }) {
   const [sort, setSort] = useState({ key: "item", direction: "asc" });
   const materials = project.materialList || [];
 
@@ -104,10 +104,12 @@ export function MaterialsView({ project, toast, updateProject }) {
   );
 
   function patchMaterials(nextMaterials) {
+    if (readOnly) return;
     updateProject({ ...project, materialList: nextMaterials });
   }
 
   function addMaterial() {
+    if (readOnly) return;
     const item = {
       id: crypto.randomUUID(),
       item: "New material",
@@ -123,6 +125,7 @@ export function MaterialsView({ project, toast, updateProject }) {
   }
 
   function updateMaterial(id, field, value) {
+    if (readOnly) return;
     patchMaterials(
       materials.map((item) =>
         item.id === id
@@ -136,6 +139,7 @@ export function MaterialsView({ project, toast, updateProject }) {
   }
 
   function deleteMaterial(id) {
+    if (readOnly) return;
     patchMaterials(materials.filter((item) => item.id !== id));
     toast("Material removed.");
   }
@@ -196,8 +200,9 @@ export function MaterialsView({ project, toast, updateProject }) {
         <div>
           <h2>Material List</h2>
           <p>
-            Build a project purchasing list for studs, screws, plywood, and
-            other materials. This list is independent from estimate line items.
+            {readOnly
+              ? "You can view this project purchasing list. Your role cannot edit it."
+              : "Build a project purchasing list for studs, screws, plywood, and other materials. This list is independent from estimate line items."}
           </p>
         </div>
         <div className="material-heading-actions">
@@ -205,7 +210,12 @@ export function MaterialsView({ project, toast, updateProject }) {
             <Icon name="download" size={18} />
             Export CSV
           </button>
-          <button className="button primary" onClick={addMaterial} type="button">
+          <button
+            className="button primary"
+            disabled={readOnly}
+            onClick={addMaterial}
+            type="button"
+          >
             <Icon name="plus" size={18} />
             Add material
           </button>
@@ -297,6 +307,7 @@ export function MaterialsView({ project, toast, updateProject }) {
             <input
               aria-label="Material name"
               className="table-input text-strong"
+              disabled={readOnly}
               onChange={(event) =>
                 updateMaterial(item.id, "item", event.target.value)
               }
@@ -305,6 +316,7 @@ export function MaterialsView({ project, toast, updateProject }) {
             <input
               aria-label={`Quantity for ${item.item}`}
               className="table-input number-input"
+              disabled={readOnly}
               min="0"
               onChange={(event) =>
                 updateMaterial(item.id, "quantity", event.target.value)
@@ -316,6 +328,7 @@ export function MaterialsView({ project, toast, updateProject }) {
             <select
               aria-label={`Unit for ${item.item}`}
               className="table-input"
+              disabled={readOnly}
               onChange={(event) =>
                 updateMaterial(item.id, "unit", event.target.value)
               }
@@ -330,6 +343,7 @@ export function MaterialsView({ project, toast, updateProject }) {
               <input
                 aria-label={`Unit cost for ${item.item}`}
                 className="table-input number-input"
+                disabled={readOnly}
                 min="0"
                 onChange={(event) =>
                   updateMaterial(item.id, "unitCost", event.target.value)
@@ -343,6 +357,7 @@ export function MaterialsView({ project, toast, updateProject }) {
               <input
                 aria-label={`Tax rate for ${item.item}`}
                 className="table-input number-input"
+                disabled={readOnly}
                 min="0"
                 onChange={(event) =>
                   updateMaterial(item.id, "taxPct", event.target.value)
@@ -358,6 +373,7 @@ export function MaterialsView({ project, toast, updateProject }) {
               <input
                 aria-label={`Delivery fee for ${item.item}`}
                 className="table-input number-input"
+                disabled={readOnly}
                 min="0"
                 onChange={(event) =>
                   updateMaterial(item.id, "deliveryFee", event.target.value)
@@ -373,6 +389,7 @@ export function MaterialsView({ project, toast, updateProject }) {
             <input
               aria-label={`Notes for ${item.item}`}
               className="table-input"
+              disabled={readOnly}
               onChange={(event) =>
                 updateMaterial(item.id, "notes", event.target.value)
               }
@@ -382,6 +399,7 @@ export function MaterialsView({ project, toast, updateProject }) {
             <button
               aria-label={`Delete ${item.item}`}
               className="icon-button danger"
+              disabled={readOnly}
               onClick={() => deleteMaterial(item.id)}
               type="button"
             >
@@ -392,6 +410,7 @@ export function MaterialsView({ project, toast, updateProject }) {
         {!materials.length ? (
           <button
             className="empty-state material-empty"
+            disabled={readOnly}
             onClick={addMaterial}
             type="button"
           >

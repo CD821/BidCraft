@@ -10,6 +10,7 @@ function companyRole(company) {
 export function CompanyWorkspaceView({
   activeCompanyId,
   activeCompany,
+  canDeleteCompany = false,
   companies,
   companySearchResults,
   companyMembers,
@@ -17,6 +18,7 @@ export function CompanyWorkspaceView({
   loading,
   message,
   onCreateCompany,
+  onDeleteCompany,
   onRefresh,
   onRemoveMember,
   onRenameCompany,
@@ -40,6 +42,8 @@ export function CompanyWorkspaceView({
     activeRole === "owner" ||
     activeRole === "admin" ||
     activeRole === "platform_admin";
+  const canAssignOwner =
+    activeRole === "owner" || activeRole === "platform_admin";
 
   useEffect(() => {
     setRenameDraft(activeCompany?.name || activeCompanyRow?.company_name || "");
@@ -198,17 +202,26 @@ export function CompanyWorkspaceView({
                     <span>{member.email || "No email"}</span>
                   </div>
                   <select
-                    disabled={!canManageCompany || loading}
+                    disabled={
+                      !canManageCompany ||
+                      loading ||
+                      (!canAssignOwner && member.role === "owner")
+                    }
                     onChange={(event) =>
                       onUpdateMemberRole(member.user_id, event.target.value)
                     }
                     value={member.role}
                   >
-                    {roleOptions.map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
+                    {roleOptions
+                      .filter(
+                        (role) =>
+                          role !== "owner" || canAssignOwner || member.role === "owner",
+                      )
+                      .map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
                   </select>
                   <div className="member-access-actions">
                     <span>
@@ -222,7 +235,8 @@ export function CompanyWorkspaceView({
                       disabled={
                         !canManageCompany ||
                         loading ||
-                        (isCurrentUser && member.role === "owner")
+                        (isCurrentUser && member.role === "owner") ||
+                        (!canAssignOwner && member.role === "owner")
                       }
                       onClick={() => onRemoveMember(member.user_id, label)}
                       type="button"
@@ -241,6 +255,33 @@ export function CompanyWorkspaceView({
           )}
         </div>
       </section>
+
+      {activeCompanyId ? (
+        <section className="settings-panel danger-zone">
+          <div className="settings-panel-heading">
+            <div>
+              <h3>Delete company</h3>
+              <p>
+                Permanently remove the active company and its estimates, price
+                book, materials, attachments, members, and join requests.
+              </p>
+            </div>
+            <button
+              className="button danger-button"
+              disabled={!canDeleteCompany || loading}
+              onClick={onDeleteCompany}
+              type="button"
+            >
+              Delete company
+            </button>
+          </div>
+          {!canDeleteCompany ? (
+            <p className="table-footnote">
+              Only company owners can delete a company.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="workspace-grid">
         <form className="settings-panel workspace-form" onSubmit={searchCompanies}>
