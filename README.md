@@ -12,6 +12,7 @@ affecting the Price Book or any other estimate.
 - Reusable multi-trade price book
 - Per-unit or flat material costs
 - Hourly, per-unit/SF, or flat labor costs
+- Per-unit or flat Other costs within each estimate
 - Searchable, aligned project list
 - Project purchasing lists with material costs, tax, delivery, notes, and sorting
 - Editable trade list shared by estimates and the price book
@@ -27,7 +28,7 @@ affecting the Price Book or any other estimate.
 - Join-company requests with owner/admin approval
 - Supabase audit logs for project, price-book, and company-setting changes
 - Waste factors and aggregated purchasing lists
-- Overhead, profit markup, and configurable tax basis
+- Overhead, profit markup or target margin, and configurable tax basis
 - Print-ready US Letter proposals
 - Browser Print / Save as PDF
 - JSON backup and restore
@@ -44,10 +45,22 @@ version. See `SUPABASE-VERCEL-SETUP.md` for the setup checklist.
 
 ## Development
 
+Profit mode is saved per estimate and defaults to markup for existing projects.
+Markup adds a percentage to direct cost plus overhead. Margin divides that cost
+by (1 - margin percentage / 100); it measures profit after overhead and before
+tax. Margin must be between 0% and 99.99%. The summary shows both profit margin
+after overhead and gross margin before overhead.
+
+Other costs default to quantity times rate. Selecting a flat total charges the
+amount once, regardless of quantity or waste. These options are saved in the
+existing project payload, so no additional Supabase migration is needed.
+
 ```powershell
 pnpm install
 pnpm dev
 ```
+
+Run calculation checks with `pnpm test`.
 
 ## Production build
 

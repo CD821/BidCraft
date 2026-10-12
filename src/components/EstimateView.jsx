@@ -6,6 +6,9 @@ import {
   materialMode,
   money,
   number,
+  normalizeProfitPct,
+  otherMode,
+  profitMode,
   projectTotals,
 } from "../lib/calc";
 import { Icon } from "./Icon";
@@ -21,6 +24,7 @@ const numericFields = new Set([
   "laborUnit",
   "laborFlat",
   "otherUnit",
+  "otherFlat",
 ]);
 
 function LineItemPicker({ items, onAdd, onClose }) {
@@ -155,7 +159,9 @@ export function EstimateView({
           laborRate: item.laborRate,
           laborUnit: item.laborUnit || 0,
           laborFlat: item.laborFlat || 0,
+          otherCostMode: otherMode(item),
           otherUnit: item.otherUnit,
+          otherFlat: item.otherFlat || 0,
         }
       : {
           id: crypto.randomUUID(),
@@ -173,7 +179,9 @@ export function EstimateView({
           laborRate: 50,
           laborUnit: 0,
           laborFlat: 0,
+          otherCostMode: "unit",
           otherUnit: 0,
+          otherFlat: 0,
         };
     patchProject({ lines: [...project.lines, line] });
     setSelectedLineId(line.id);
@@ -551,21 +559,43 @@ export function EstimateView({
                     </span>
                   </div>
                   <div className="cost-cell">
-                    <strong>{money.format(line.costs.other)}</strong>
-                    <label>
+                    <span className="project-rate-label">This estimate only</span>
+                    <select
+                      aria-label={`Other cost method for ${line.item}`}
+                      className="cost-mode-select"
+                      disabled={readOnly}
+                      onChange={(event) =>
+                        updateLine(line.id, "otherCostMode", event.target.value)
+                      }
+                      value={otherMode(line)}
+                    >
+                      <option value="unit">Rate per {line.unit}</option>
+                      <option value="flat">Flat other total</option>
+                    </select>
+                    <label className="project-rate-input">
                       <span>$</span>
                       <input
+                        aria-label={`Other ${otherMode(line) === "flat" ? "total" : "rate"} for ${line.item}`}
                         className="table-input"
                         disabled={readOnly}
                         min="0"
                         onChange={(event) =>
-                          updateLine(line.id, "otherUnit", event.target.value)
+                          updateLine(
+                            line.id,
+                            otherMode(line) === "flat" ? "otherFlat" : "otherUnit",
+                            event.target.value,
+                          )
                         }
                         step="0.01"
                         type="number"
-                        value={line.otherUnit}
+                        value={otherMode(line) === "flat" ? line.otherFlat || 0 : line.otherUnit || 0}
                       />
+                      <span>{otherMode(line) === "flat" ? "total" : `/${line.unit}`}</span>
                     </label>
+                    <span className="cost-result">
+                      Other total
+                      <strong>{money.format(line.costs.other)}</strong>
+                    </span>
                   </div>
                   <strong className="line-total">
                     {money.format(line.costs.direct)}
@@ -657,16 +687,34 @@ export function EstimateView({
               </span>
               <strong>{money.format(totals.overhead)}</strong>
             </label>
+            <label className="profit-mode">
+              <span>Profit method</span>
+              <select
+                aria-describedby="profit-method-help"
+                disabled={readOnly}
+                onChange={(event) => patchProject({
+                  profitMode: event.target.value,
+                  profitPct: normalizeProfitPct(project.profitPct, event.target.value),
+                })}
+                value={profitMode(project)}
+              >
+                <option value="markup">Markup</option>
+                <option value="margin">Margin</option>
+              </select>
+            </label>
             <label>
-              <span>Profit markup</span>
+              <span>Profit {profitMode(project)}</span>
               <span className="percent-input">
                 <input
+                  aria-label={`Profit ${profitMode(project)} percent`}
+                  aria-describedby="profit-method-help"
                   disabled={readOnly}
+                  max={profitMode(project) === "margin" ? 99.99 : undefined}
                   min="0"
                   onChange={(event) =>
-                    patchProject({ profitPct: Number(event.target.value) })
+                    patchProject({ profitPct: normalizeProfitPct(event.target.value, profitMode(project)) })
                   }
-                  step="0.25"
+                  step="0.01"
                   type="number"
                   value={project.profitPct}
                 />
@@ -674,6 +722,11 @@ export function EstimateView({
               </span>
               <strong>{money.format(totals.profit)}</strong>
             </label>
+            <p className="profit-method-help" id="profit-method-help">
+              {profitMode(project) === "margin"
+                ? "Margin sets profit as a share of the selling price, after overhead and before tax. Enter less than 100%."
+                : "Markup adds a percentage to cost including overhead, before tax."}
+            </p>
             <label>
               <span>Tax</span>
               <span className="percent-input">
@@ -710,6 +763,10 @@ export function EstimateView({
           <div className="bid-total">
             <span>Bid total</span>
             <strong>{money.format(totals.total)}</strong>
+          </div>
+          <div className="margin-row">
+            <span>Profit margin</span>
+            <strong>{(totals.profitMargin * 100).toFixed(1)}%</strong>
           </div>
           <div className="margin-row">
             <span>Gross margin</span>

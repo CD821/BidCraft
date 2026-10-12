@@ -1,8 +1,17 @@
-BIDCRAFT v0.10 - QUICK START
+BIDCRAFT v0.11 - QUICK START
 ===========================
 
 WHAT'S NEW
 
+- Choose profit markup or margin in each Estimate summary.
+  Markup adds a percent to cost including overhead; margin is profit as a
+  percent of the selling price after overhead and before tax (less than 100%).
+  For $100 cost, 20% markup is $120; 20% margin is $125 before tax.
+- Other costs can now be priced per unit or as a flat total in each estimate.
+  Flat totals are charged once and do not multiply by quantity or waste.
+- Existing estimates keep markup and per-unit Other costs by default.
+- No additional Supabase SQL update is required for these pricing options.
+- Fixed asset paths when refreshing estimate URLs on Vercel or the local app.
 - Added company role permissions:
   owner/admin can manage company settings, members, and price book.
   estimator can create and edit estimates.

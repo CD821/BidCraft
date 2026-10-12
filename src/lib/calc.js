@@ -15,6 +15,22 @@ export function laborMode(line) {
   return line.laborCostMode || "hourly";
 }
 
+export function otherMode(line) {
+  return line.otherCostMode === "flat" ? "flat" : "unit";
+}
+
+export function profitMode(project) {
+  return project.profitMode === "margin" ? "margin" : "markup";
+}
+
+export function normalizeProfitPct(value, mode) {
+  const percentage = Number(value);
+  if (!Number.isFinite(percentage)) return 0;
+  return mode === "margin"
+    ? Math.min(99.99, Math.max(0, percentage))
+    : Math.max(0, percentage);
+}
+
 export function lineCosts(line) {
   const qty = Number(line.qty) || 0;
   const waste = Number(line.wastePct) || 0;
@@ -36,7 +52,10 @@ export function lineCosts(line) {
       : currentLaborMode === "unit"
         ? qty * (Number(line.laborUnit) || 0)
         : hourlyLabor;
-  const other = qty * (Number(line.otherUnit) || 0);
+  const other =
+    otherMode(line) === "flat"
+      ? Number(line.otherFlat) || 0
+      : qty * (Number(line.otherUnit) || 0);
 
   return {
     qty,
@@ -69,8 +88,12 @@ export function projectTotals(project) {
   const other = lines.reduce((sum, line) => sum + line.costs.other, 0);
   const overhead = direct * ((Number(project.overheadPct) || 0) / 100);
   const loadedCost = direct + overhead;
-  const profit = loadedCost * ((Number(project.profitPct) || 0) / 100);
-  const preTax = loadedCost + profit;
+  const profitRate = normalizeProfitPct(project.profitPct, profitMode(project)) / 100;
+  // Margin is measured against selling price; markup is measured against cost.
+  const preTax = profitMode(project) === "margin"
+    ? loadedCost / (1 - profitRate)
+    : loadedCost * (1 + profitRate);
+  const profit = preTax - loadedCost;
   const taxRate = (Number(project.taxPct) || 0) / 100;
   const tax =
     project.taxMode === "total"
@@ -97,6 +120,7 @@ export function projectTotals(project) {
     tax,
     total,
     grossMargin,
+    profitMargin: preTax ? profit / preTax : 0,
     sellMultiplier,
   };
 }
